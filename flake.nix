@@ -5,12 +5,12 @@
     # NixOS official package source, using the nixos-25.11 branch here
     nixpkgs.url =    "github:NixOS/nixpkgs/nixos-unstable";
     nixpkgs-stable.url = "github:NixOS/nixpkgs/nixos-25.11";
-    helix.url = "github:helix-editor/helix/master"; 
+    #helix.url = "github:helix-editor/helix/master"; 
     home-manager.url = "github:nix-community/home-manager";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
   };
 		
-  outputs = { self, nixpkgs, home-manager, ... }@inputs: {
+  outputs = { self, nixpkgs, nixpkgs-stable, home-manager, ... }@inputs: {
     # Please replace my-nixos with your hostname
     nixosConfigurations = { 
      nixos = nixpkgs.lib.nixosSystem {

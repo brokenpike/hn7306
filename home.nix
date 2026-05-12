@@ -12,6 +12,7 @@
   home.homeDirectory = "/home/scott";
   #home.sessionVariables.EDITOR = "hx";
   # use select  "| sort " to make alphabetical
+  
   home.packages = with pkgs; [
     #inputs.nixpkgs-stable.legacyPackages."x86_64-linux".btop
     alacritty

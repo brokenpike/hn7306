@@ -13,6 +13,15 @@
   # Bootloader.
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
+  # Kernel selection
+  boot.kernelPackages = pkgs.linuxPackages_latest;
+# Strix halo related settings
+nixpkgs.config.rocmSupport = true;
+hardware.amdgpu.opencl.enable = true;
+hardware.graphics.enable = true;
+hardware.graphics.enable32Bit = true; # Replaced 'driSupport32Bit'
+services.lact.enable = true;
+
 
   networking.hostName = "nixos"; # Define your hostname.
   # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
@@ -46,7 +55,24 @@
     layout = "no";
     variant = "";
   };
-
+  services.ollama = {
+    enable = true;
+    #package = pkgs.ollama-rocm; # or set pkgs.ollama-vulkan 
+    package = pkgs.ollama-vulkan;
+    loadModels = [
+      "ministral-3:14b"
+      "ministral-3:8b"
+      "mistral-medium-3.5"
+      "gpt-oss-120b"
+      
+    ];
+    #rocmOverrideGfx = "11.5.1";
+    environmentVariables = {
+      # Hopefully helps with offloading layers to GPU, it didn't
+      HSA_ENABLE_SDMA = "0";
+      OLLAMA_DEBUG = "1";
+    };
+  };
   # Configure console keymap
   console.keyMap = "no";
 
@@ -94,7 +120,7 @@
     vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
     wget
     git
-    inputs.helix.packages."${pkgs.stdenv.hostPlatform.system}".helix
+    #inputs.helix.packages."${pkgs.stdenv.hostPlatform.system}".helix
   ];
 
   # Some programs need SUID wrappers, can be configured further or are
