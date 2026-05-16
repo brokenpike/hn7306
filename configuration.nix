@@ -12,6 +12,16 @@
 
   # Bootloader.
   boot.loader.systemd-boot.enable = true;
+  
+  boot.kernelParams = [
+  # The kernel module parameter gttsize is a is deprecated and will be removed in the future.
+  "amdgpu.gttsize=120000"
+
+  # specified as 4KiB pages: 120 GB GTT
+  #options ttm pages_limit=31457280
+  # specified as 4KiB pages: 60 GB pre-allocated
+  #options ttm page_pool_size 15728640
+];
   boot.loader.efi.canTouchEfiVariables = true;
   # Kernel selection
   boot.kernelPackages = pkgs.linuxPackages_latest;
@@ -21,6 +31,7 @@ hardware.amdgpu.opencl.enable = true;
 hardware.graphics.enable = true;
 hardware.graphics.enable32Bit = true; # Replaced 'driSupport32Bit'
 services.lact.enable = true;
+
 
 
   networking.hostName = "nixos"; # Define your hostname.
@@ -50,20 +61,24 @@ services.lact.enable = true;
   services.displayManager.gdm.enable = true;
   services.desktopManager.gnome.enable = true;
 
+  services.desktopManager.gnome.extraGSettingsOverrides = ''
+    [org.gnome.mutter]
+    experimental-features=['scale-monitor-framebuffer', 'xwayland-native-scaling']
+  '';
   # Configure keymap in X11
   services.xserver.xkb = {
-    layout = "no";
+    layout = "no,us";
     variant = "";
   };
   services.ollama = {
     enable = true;
-    #package = pkgs.ollama-rocm; # or set pkgs.ollama-vulkan 
-    package = pkgs.ollama-vulkan;
+    package = pkgs.ollama-rocm; # or set pkgs.ollama-vulkan 
+    #package = pkgs.ollama-vulkan;
     loadModels = [
       "ministral-3:14b"
       "ministral-3:8b"
       "mistral-medium-3.5"
-      "gpt-oss-120b"
+      "gpt-oss:120b"
       
     ];
     #rocmOverrideGfx = "11.5.1";
@@ -73,12 +88,14 @@ services.lact.enable = true;
       OLLAMA_DEBUG = "1";
     };
   };
+
+
   # Configure console keymap
   console.keyMap = "no";
 
   # Enable CUPS to print documents.
   services.printing.enable = true;
-
+  services.fwupd.enable = true;
   # Enable sound with pipewire.
   services.pulseaudio.enable = false;
   security.rtkit.enable = true;
@@ -120,6 +137,7 @@ services.lact.enable = true;
     vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
     wget
     git
+    rocmPackages.rocm-smi
     #inputs.helix.packages."${pkgs.stdenv.hostPlatform.system}".helix
   ];
 
@@ -129,6 +147,7 @@ services.lact.enable = true;
   # programs.gnupg.agent = {
   #   enable = true;
   #   enableSSHSupport = true;
+ 
   # };
 
   # List services that you want to enable:
