@@ -15,7 +15,9 @@
   
   boot.kernelParams = [
   # The kernel module parameter gttsize is a is deprecated and will be removed in the future.
-  "amdgpu.gttsize=120000"
+  #"amdgpu.gttsize=120000"
+  "amd_iommu=off" "amdgpu.gttsize=131072" "ttm.pages_limit=33554432"
+
 
   # specified as 4KiB pages: 120 GB GTT
   #options ttm pages_limit=31457280
@@ -119,7 +121,7 @@ services.lact.enable = true;
   users.users.scott = {
     isNormalUser = true;
     description = "scott";
-    extraGroups = [ "networkmanager" "wheel" ];
+    extraGroups = [ "networkmanager" "wheel"  "render" "video" ];
     packages = with pkgs; [
     #  thunderbird
     ];
@@ -127,7 +129,7 @@ services.lact.enable = true;
 
   # Install firefox.
   programs.firefox.enable = true;
-
+  #programs.openclaw.enable = true;
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
 
