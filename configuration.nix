@@ -122,12 +122,13 @@ services.lact.enable = true;
   users.users.scott = {
     isNormalUser = true;
     description = "scott";
-    extraGroups = [ "networkmanager" "wheel"  "render" "video" ];
+    extraGroups = [ "networkmanager" "wheel"  "render" "video" "libvirtd"];
     packages = with pkgs; [
     #  thunderbird
     ];
   };
-
+  users.groups.libvirtd.members = [ "scott" ];
+  users.groups.kvm.members = [ "scott" ];
   # Install firefox.
   programs.firefox.enable = true;
   #programs.openclaw.enable = true;
