@@ -8,6 +8,7 @@
   imports =
     [ # Include the results of the hardware scan.
       ./hardware-configuration.nix
+      ./vm.nix
     ];
 
   # Bootloader.
@@ -16,7 +17,7 @@
   boot.kernelParams = [
   # The kernel module parameter gttsize is a is deprecated and will be removed in the future.
   #"amdgpu.gttsize=120000"
-  "amd_iommu=off" "amdgpu.gttsize=131072" "ttm.pages_limit=33554432"
+  "amd_iommu=off" "amdgpu.gttsize=117760" "ttm.pages_limit=33554432"
 
 
   # specified as 4KiB pages: 120 GB GTT
@@ -140,6 +141,7 @@ services.lact.enable = true;
     wget
     git
     rocmPackages.rocm-smi
+    ntfs3g
     #inputs.helix.packages."${pkgs.stdenv.hostPlatform.system}".helix
   ];
 
