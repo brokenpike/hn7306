@@ -2,40 +2,45 @@
 # your system.  Help is available in the configuration.nix(5) man page
 # and in the NixOS manual (accessible by running ‘nixos-help’).
 
-{ config, pkgs, inputs, lib, ... }:
+{
+  config,
+  pkgs,
+  inputs,
+  lib,
+  ...
+}:
 
 {
-  imports =
-    [ # Include the results of the hardware scan.
-      ./hardware-configuration.nix
-      ./vm.nix
-    ];
+  imports = [
+    # Include the results of the hardware scan.
+    ./hardware-configuration.nix
+    ./vm.nix
+  ];
 
   # Bootloader.
   boot.loader.systemd-boot.enable = true;
-  
+
   boot.kernelParams = [
-  # The kernel module parameter gttsize is a is deprecated and will be removed in the future.
-  #"amdgpu.gttsize=120000"
-  "amd_iommu=off" "amdgpu.gttsize=117760" "ttm.pages_limit=33554432"
+    # The kernel module parameter gttsize is a is deprecated and will be removed in the future.
+    #"amdgpu.gttsize=120000"
+    "amd_iommu=off"
+    "amdgpu.gttsize=117760"
+    "ttm.pages_limit=33554432"
 
-
-  # specified as 4KiB pages: 120 GB GTT
-  #options ttm pages_limit=31457280
-  # specified as 4KiB pages: 60 GB pre-allocated
-  #options ttm page_pool_size 15728640
-];
+    # specified as 4KiB pages: 120 GB GTT
+    #options ttm pages_limit=31457280
+    # specified as 4KiB pages: 60 GB pre-allocated
+    #options ttm page_pool_size 15728640
+  ];
   boot.loader.efi.canTouchEfiVariables = true;
   # Kernel selection
   boot.kernelPackages = pkgs.linuxPackages_latest;
-# Strix halo related settings
-nixpkgs.config.rocmSupport = true;
-hardware.amdgpu.opencl.enable = true;
-hardware.graphics.enable = true;
-hardware.graphics.enable32Bit = true; # Replaced 'driSupport32Bit'
-services.lact.enable = true;
-
-
+  # Strix halo related settings
+  nixpkgs.config.rocmSupport = true;
+  hardware.amdgpu.opencl.enable = true;
+  hardware.graphics.enable = true;
+  hardware.graphics.enable32Bit = true; # Replaced 'driSupport32Bit'
+  services.lact.enable = true;
 
   networking.hostName = "nixos"; # Define your hostname.
   # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
@@ -50,9 +55,10 @@ services.lact.enable = true;
   # Set your time zone.
   time.timeZone = "Europe/Oslo";
   #  Enable flakes
-  nix.settings.experimental-features = [ "nix-command" "flakes" ];
-
-
+  nix.settings.experimental-features = [
+    "nix-command"
+    "flakes"
+  ];
 
   # Select internationalisation properties.
   i18n.defaultLocale = "en_US.UTF-8";
@@ -73,25 +79,26 @@ services.lact.enable = true;
     layout = "no,us";
     variant = "";
   };
- /*  services.ollama = {
-    enable = true;
-    package = pkgs.ollama-rocm; # or set pkgs.ollama-vulkan 
-    #package = pkgs.ollama-vulkan;
-    loadModels = [
-      "ministral-3:14b"
-      "ministral-3:8b"
-      "mistral-medium-3.5"
-      "gpt-oss:120b"
-      
-    ];
-    #rocmOverrideGfx = "11.5.1";
-    environmentVariables = {
-      # Hopefully helps with offloading layers to GPU, it didn't
-      HSA_ENABLE_SDMA = "0";
-      OLLAMA_DEBUG = "1";
-    };
-  }; */
+  /*
+    services.ollama = {
+      enable = true;
+      package = pkgs.ollama-rocm; # or set pkgs.ollama-vulkan
+      #package = pkgs.ollama-vulkan;
+      loadModels = [
+        "ministral-3:14b"
+        "ministral-3:8b"
+        "mistral-medium-3.5"
+        "gpt-oss:120b"
 
+      ];
+      #rocmOverrideGfx = "11.5.1";
+      environmentVariables = {
+        # Hopefully helps with offloading layers to GPU, it didn't
+        HSA_ENABLE_SDMA = "0";
+        OLLAMA_DEBUG = "1";
+      };
+    };
+  */
 
   # Configure console keymap
   console.keyMap = "no";
@@ -122,15 +129,21 @@ services.lact.enable = true;
   users.users.scott = {
     isNormalUser = true;
     description = "scott";
-    extraGroups = [ "networkmanager" "wheel"  "render" "video" "libvirtd"];
+    extraGroups = [
+      "networkmanager"
+      "wheel"
+      "render"
+      "video"
+      "libvirtd"
+    ];
     packages = with pkgs; [
-    #  thunderbird
+      #  thunderbird
     ];
   };
   users.groups.libvirtd.members = [ "scott" ];
   users.groups.kvm.members = [ "scott" ];
-  # Install firefox.
-  programs.firefox.enable = true;
+  # Install fox.
+  #programs.firefox.enable = true;
   #programs.openclaw.enable = true;
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
@@ -146,25 +159,25 @@ services.lact.enable = true;
     ntfs3g
     #inputs.helix.packages."${pkgs.stdenv.hostPlatform.system}".helix
   ];
-fileSystems =
-  let
-    ntfs-drives = [
-      "/home/scott/Scratch"
-    ];
-  in
-  lib.genAttrs ntfs-drives (path: {
-    options = [
-      "uid=1000" # REPLACE "$UID" WITH YOUR ACTUAL UID!
-      # "nofail"
-    ];
-  });
+  fileSystems =
+    let
+      ntfs-drives = [
+        "/home/scott/Scratch"
+      ];
+    in
+    lib.genAttrs ntfs-drives (path: {
+      options = [
+        "uid=1000" # REPLACE "$UID" WITH YOUR ACTUAL UID!
+        # "nofail"
+      ];
+    });
   # Some programs need SUID wrappers, can be configured further or are
   # started in user sessions.
   # programs.mtr.enable = true;
   # programs.gnupg.agent = {
   #   enable = true;
   #   enableSSHSupport = true;
- 
+
   # };
 
   # List services that you want to enable:
