@@ -2,7 +2,7 @@
 # your system.  Help is available in the configuration.nix(5) man page
 # and in the NixOS manual (accessible by running ‘nixos-help’).
 
-{ config, pkgs, inputs,  ... }:
+{ config, pkgs, inputs, lib, ... }:
 
 {
   imports =
@@ -73,7 +73,7 @@ services.lact.enable = true;
     layout = "no,us";
     variant = "";
   };
-  services.ollama = {
+ /*  services.ollama = {
     enable = true;
     package = pkgs.ollama-rocm; # or set pkgs.ollama-vulkan 
     #package = pkgs.ollama-vulkan;
@@ -90,7 +90,7 @@ services.lact.enable = true;
       HSA_ENABLE_SDMA = "0";
       OLLAMA_DEBUG = "1";
     };
-  };
+  }; */
 
 
   # Configure console keymap
@@ -140,12 +140,24 @@ services.lact.enable = true;
   environment.systemPackages = with pkgs; [
     vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
     wget
+    linux-wifi-hotspot
     git
     rocmPackages.rocm-smi
     ntfs3g
     #inputs.helix.packages."${pkgs.stdenv.hostPlatform.system}".helix
   ];
-
+fileSystems =
+  let
+    ntfs-drives = [
+      "/home/scott/Scratch"
+    ];
+  in
+  lib.genAttrs ntfs-drives (path: {
+    options = [
+      "uid=1000" # REPLACE "$UID" WITH YOUR ACTUAL UID!
+      # "nofail"
+    ];
+  });
   # Some programs need SUID wrappers, can be configured further or are
   # started in user sessions.
   # programs.mtr.enable = true;

@@ -9,10 +9,10 @@
     #helix.url = "github:helix-editor/helix/master"; 
     home-manager.url = "github:nix-community/home-manager";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
-    lmstudio = {
-	    url = "github:Daaboulex/lmstudio-nix";
-	    inputs.nixpkgs.follows = "nixpkgs";
-    };
+    # lmstudio = {
+	  #   url = "github:Daaboulex/lmstudio-nix";
+	  #   inputs.nixpkgs.follows = "nixpkgs";
+    # };
   };
 		
   outputs = { self, determinate, nixpkgs, nixpkgs-stable, home-manager, ... }@inputs: {
