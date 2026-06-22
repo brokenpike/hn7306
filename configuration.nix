@@ -51,30 +51,6 @@
 
   # Enable networking
   networking.networkmanager.enable = true;
-  networking.nat = {
-    enable = true;
-    externalInterface = "enp198s0f3u1u4"; # your internet interface
-    internalInterfaces = [ "usb0" ];
-  };
-
-  networking.interfaces.usb0.ipv4.addresses = [
-    {
-      address = "192.168.42.1";
-      prefixLength = 24;
-    }
-  ];
-
-  # Allow traffic
-  networking.firewall.trustedInterfaces = [ "usb0" ];
-
-  # Lightweight DHCP + DNS for the phone
-  services.dnsmasq = {
-    enable = true;
-    settings = {
-      interface = "usb0";
-      dhcp-range = "192.168.42.10,192.168.42.100,12h";
-    };
-  };
 
   # Set your time zone.
   time.timeZone = "Europe/Oslo";
@@ -181,7 +157,9 @@
     git
     rocmPackages.rocm-smi
     ntfs3g
+
     #inputs.helix.packages."${pkgs.stdenv.hostPlatform.system}".helix
+    #inputs.nixpkgs-stable.packages."${pkgs.stdenv.hostPlatform.system}".firefox
   ];
   fileSystems =
     let
