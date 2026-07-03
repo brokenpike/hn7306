@@ -22,6 +22,7 @@
     deadnix
     direnv
     evince
+    #firefox
     fish
     #gimp
     git-credential-manager
@@ -52,6 +53,7 @@
     vscode
     #wl-clipboard-rs# did not enable the hx system clipboard
     wl-clipboard # space + "y" yanks to system clipboard
+    zeroad
     zed-editor
     #    zellij
     wineWow64Packages.staging
@@ -147,14 +149,14 @@
     ];
   };
 
-  # programs.firefox = {
-  #   enable = true;
-  #   profiles.default.settings = {
-  #     "widget.gtk.libadwaita-colors.enabled" = false;
-  #     "browser.theme.native-theme" = false;
-  #   };
-  #   configPath = ".mozilla/firefox";
-  # };
+  programs.firefox = {
+    enable = true;
+    profiles.default.settings = {
+      "widget.gtk.libadwaita-colors.enabled" = false;
+      "browser.theme.native-theme" = false;
+    };
+    configPath = ".mozilla/firefox";
+  };
   programs.git = {
     enable = true;
     settings.user.name = "brokenpike";
