@@ -9,16 +9,20 @@
     #helix.url = "github:helix-editor/helix/master"; 
     home-manager.url = "github:nix-community/home-manager";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
+    nixos-hardware = {
+      url = "github:NixOS/nixos-hardware";
+      inputs.nixpkgs.follows = "nixpkgs-stable";
+    };
     # lmstudio = {
 	  #   url = "github:Daaboulex/lmstudio-nix";
 	  #   inputs.nixpkgs.follows = "nixpkgs";
     # };
   };
 		
-  outputs = { self, determinate, nixpkgs, nixpkgs-stable, home-manager, ... }@inputs: {
+  outputs = { self, determinate, nixpkgs, nixpkgs-stable, home-manager,nixos-hardware, ... }@inputs: {
     # Please replace my-nixos with your hostname
     nixosConfigurations = { 
-     nixos = nixpkgs.lib.nixosSystem {
+     hn7306 = nixpkgs.lib.nixosSystem {
       specialArgs = {inherit inputs;};
       modules = [
         determinate.nixosModules.default
@@ -32,6 +36,7 @@
               home-manager.extraSpecialArgs = { inherit inputs; };
               home-manager.users.scott = ./home.nix;
         }
+        nixos-hardware.nixosModules.asus-proart-px13-hn7306eac
       ];
     };
    }; 
