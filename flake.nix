@@ -11,7 +11,8 @@
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
     nixos-hardware = {
       url = "github:NixOS/nixos-hardware";
-      inputs.nixpkgs.follows = "nixpkgs-stable";
+      inputs.nixpkgs.follows = "nixpkgs";
+      #inputs.nixpkgs.follows = "nixpkgs-stable";
     };
     # lmstudio = {
 	  #   url = "github:Daaboulex/lmstudio-nix";

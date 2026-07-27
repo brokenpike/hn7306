@@ -155,7 +155,8 @@
     wget
     linux-wifi-hotspot
     git
-    #rocmPackages.rocm-smi
+    libdisplay-info
+    rocmPackages.rocm-smi
     ntfs3g
 
     #inputs.helix.packages."${pkgs.stdenv.hostPlatform.system}".helix
