@@ -56,7 +56,7 @@
     zeroad
     zed-editor
     #    zellij
-    wineWow64Packages.staging
+    #wineWow64Packages.staging
   ];
   programs.obs-studio = {
     enable = true;
