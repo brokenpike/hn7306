@@ -32,29 +32,29 @@
     hunspellDicts.nb-no
     hunspellDicts.th_TH
     hunspellDicts.uk_UA
-    inkscape-with-extensions
+    #inkscape-with-extensions
     #    kdePackages.kdenlive
     languagetool
     lazygit
     libreoffice-fresh
-    miro
+    #miro
     microsoft-edge
     nix-output-monitor
     #signald
     obsidian
-    signal-desktop
+    #signal-desktop
     #stable.chromium
     #stable.vim
     #stable.zeroad
-    tesseract
+    #tesseract
     tilix
     tmux
-    vivaldi
+    #vivaldi
     vscode
     #wl-clipboard-rs# did not enable the hx system clipboard
     wl-clipboard # space + "y" yanks to system clipboard
-    zeroad
-    zed-editor
+    #zeroad
+    #zed-editor
     #    zellij
     #wineWow64Packages.staging
   ];
@@ -66,7 +66,7 @@
       obs-pipewire-audio-capture
     ];
   };
-
+/*
   programs.yazi = {
     enable = true;
     # flavors = {
@@ -96,6 +96,7 @@
       };
     };
   };
+  */
   programs.helix = {
     enable = true;
     defaultEditor = true;
@@ -125,7 +126,7 @@
 
   #programs.fish.enable = true;
   programs.fish = {
-    #defaultShell = true;
+ #   defaultShell = true;
     enable = true;
     interactiveShellInit = ''
       set fish_greeting # Disable greeting
