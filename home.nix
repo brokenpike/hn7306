@@ -53,7 +53,7 @@
     vscode
     #wl-clipboard-rs# did not enable the hx system clipboard
     wl-clipboard # space + "y" yanks to system clipboard
-    #zeroad
+    zeroad
     #zed-editor
     #    zellij
     #wineWow64Packages.staging
@@ -66,36 +66,36 @@
       obs-pipewire-audio-capture
     ];
   };
-/*
-  programs.yazi = {
-    enable = true;
-    # flavors = {
-    #   catppuccin-mocha = pkgs.fetchFromGitHub {
-    #     owner = "yazi-rs";
-    #     repo = "flavors";
-    #     rev = "main";
-    #     sha256 = "sha256-9hw6+yDI1KMl0e33ZMnFlitS9eE/dG5qW8b+E7k5Oks=";
-    #     sparseCheckout = [ "catppuccin-mocha.yazi" ];
-    #   };
-    # };
-    # theme = {
-    #   flavor = {
-    #     dark = "dracula";
-    #     light = "gruvbox";
-    #   };
-    # };
-    shellWrapperName = "y";
-    settings = {
-      opener = {
-        edit = [
-          {
-            block = true;
-            run = "hx \"$@\"";
-          }
-        ];
+  /*
+    programs.yazi = {
+      enable = true;
+      # flavors = {
+      #   catppuccin-mocha = pkgs.fetchFromGitHub {
+      #     owner = "yazi-rs";
+      #     repo = "flavors";
+      #     rev = "main";
+      #     sha256 = "sha256-9hw6+yDI1KMl0e33ZMnFlitS9eE/dG5qW8b+E7k5Oks=";
+      #     sparseCheckout = [ "catppuccin-mocha.yazi" ];
+      #   };
+      # };
+      # theme = {
+      #   flavor = {
+      #     dark = "dracula";
+      #     light = "gruvbox";
+      #   };
+      # };
+      shellWrapperName = "y";
+      settings = {
+        opener = {
+          edit = [
+            {
+              block = true;
+              run = "hx \"$@\"";
+            }
+          ];
+        };
       };
     };
-  };
   */
   programs.helix = {
     enable = true;
@@ -126,7 +126,7 @@
 
   #programs.fish.enable = true;
   programs.fish = {
- #   defaultShell = true;
+    #   defaultShell = true;
     enable = true;
     interactiveShellInit = ''
       set fish_greeting # Disable greeting
