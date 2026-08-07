@@ -40,6 +40,7 @@
   hardware.amdgpu.opencl.enable = true;
   hardware.graphics.enable = true;
   hardware.graphics.enable32Bit = true; # Replaced 'driSupport32Bit'
+
   services.lact.enable = true;
 
   networking.hostName = "hn7306"; # Define your hostname.
@@ -109,6 +110,7 @@
   # Enable sound with pipewire.
   services.pulseaudio.enable = false;
   security.rtkit.enable = true;
+  services.printing.drivers = [ pkgs.cnijfilter2 ];
   services.pipewire = {
     enable = true;
     alsa.enable = true;
@@ -158,7 +160,7 @@
     libdisplay-info
     rocmPackages.rocm-smi
     ntfs3g
-
+    cnijfilter2 # canon printer drivers
     #inputs.helix.packages."${pkgs.stdenv.hostPlatform.system}".helix
     #inputs.nixpkgs-stable.packages."${pkgs.stdenv.hostPlatform.system}".firefox
   ];
