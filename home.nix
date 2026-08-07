@@ -34,7 +34,7 @@
     hunspellDicts.uk_UA
     #inkscape-with-extensions
     #    kdePackages.kdenlive
-    kitty
+    #kitty # move to programs.kitty
     languagetool
     lazygit
     libreoffice-fresh
@@ -127,7 +127,7 @@
 
   #programs.fish.enable = true;
   programs.fish = {
-    #   defaultShell = true;
+    #defaultShell = true;
     enable = true;
     interactiveShellInit = ''
       set fish_greeting # Disable greeting
@@ -166,6 +166,12 @@
     settings.credential.helper = "manager";
     settings.credential.credentialStore = "cache";
     signing.format = "openpgp";
+  };
+  programs.kitty = {
+    enable = true;
+    settings = {
+      shell = "${pkgs.fish}/bin/fish";
+    };
   };
   # This value determines the Home Manager release that your
   # configuration is compatible with. This helps avoid breakage
