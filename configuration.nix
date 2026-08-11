@@ -100,6 +100,7 @@
       };
     };
   */
+  services.flatpak.enable = true;
 
   # Configure console keymap
   console.keyMap = "no";

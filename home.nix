@@ -34,7 +34,7 @@
     hunspellDicts.uk_UA
     #inkscape-with-extensions
     #    kdePackages.kdenlive
-    #kitty # move to programs.kitty
+    #kitty # moved to programs.kitty
     languagetool
     lazygit
     libreoffice-fresh
