@@ -47,7 +47,7 @@
               home-manager.extraSpecialArgs = { inherit inputs; };
               home-manager.users.scott = ./home.nix;
             }
-            nixos-hardware.nixosModules.asus-proart-px13-hn7306eac
+            # nixos-hardware.nixosModules.asus-proart-px13-hn7306eac
           ];
         };
       };

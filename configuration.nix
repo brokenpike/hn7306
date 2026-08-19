@@ -40,7 +40,7 @@
   hardware.amdgpu.opencl.enable = true;
   hardware.graphics.enable = true;
   hardware.graphics.enable32Bit = true; # Replaced 'driSupport32Bit'
-
+  hardware.enableRedistributableFirmware = true;
   services.lact.enable = true;
 
   networking.hostName = "hn7306"; # Define your hostname.
