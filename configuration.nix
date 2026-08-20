@@ -163,6 +163,8 @@
     ntfs3g
     cnijfilter2 # canon printer drivers
     usbutils
+    libguestfs
+    guestfs-tools
     #inputs.helix.packages."${pkgs.stdenv.hostPlatform.system}".helix
     #inputs.nixpkgs-stable.packages."${pkgs.stdenv.hostPlatform.system}".firefox
   ];
