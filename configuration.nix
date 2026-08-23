@@ -165,21 +165,32 @@
     usbutils
     libguestfs
     guestfs-tools
+    parted
+    btrfs-progs
     #inputs.helix.packages."${pkgs.stdenv.hostPlatform.system}".helix
     #inputs.nixpkgs-stable.packages."${pkgs.stdenv.hostPlatform.system}".firefox
   ];
-  fileSystems =
-    let
-      ntfs-drives = [
-        "/home/scott/Scratch"
-      ];
-    in
-    lib.genAttrs ntfs-drives (path: {
-      options = [
-        "uid=1000" # REPLACE "$UID" WITH YOUR ACTUAL UID!
-        # "nofail"
-      ];
-    });
+fileSystems."/home/scott/Scratch" = {
+  device = "/dev/disk/by-uuid/4A8BF58F1A4A9FF7";
+  fsType = "ntfs3";
+  options = [
+    "uid=1000"
+    "gid=100"
+    "rw"
+    "nofail"
+    "x-systemd.automount"
+  ];
+};
+fileSystems."/mnt/llms" = {
+  device = "/dev/disk/by-uuid/02abdfe8-34bd-4eba-80c8-a820d843c46c";
+  fsType = "btrfs";
+  options = [
+    "compress=zstd:3"
+    "noatime"
+    "nofail"
+    "x-systemd.automount"
+  ];
+};
   # Some programs need SUID wrappers, can be configured further or are
   # started in user sessions.
   # programs.mtr.enable = true;
