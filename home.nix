@@ -37,7 +37,7 @@
     #kitty # moved to programs.kitty
     languagetool
     lazygit
-    libreoffice-fresh
+    libreoffice-stable
     #miro
     microsoft-edge
     nix-output-monitor
