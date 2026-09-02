@@ -181,6 +181,14 @@
   #     "x-systemd.automount"
   #   ];
   # };
+  fileSystems."/scratch" = {
+  device = "/dev/disk/by-uuid/7aaa6735-4290-4fde-8850-2c44cf3e865e";
+  fsType = "btrfs";
+  options = [
+"compress=zstd:3"
+"noatime"
+];
+};
   #fileSystems."/mnt/llms" = {
   #   device = "/dev/disk/by-uuid/02abdfe8-34bd-4eba-80c8-a820d843c46c";
   #   fsType = "btrfs";
