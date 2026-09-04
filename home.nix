@@ -25,6 +25,7 @@
     #firefox
     fish
     #gimp
+    gnomeExtensions.tiling-shell
     git-credential-manager
     grc
     htop
