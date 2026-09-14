@@ -168,6 +168,8 @@
     guestfs-tools
     parted
     btrfs-progs
+    proton-vpn
+    wireguard-tools
     #inputs.helix.packages."${pkgs.stdenv.hostPlatform.system}".helix
     #inputs.nixpkgs-stable.packages."${pkgs.stdenv.hostPlatform.system}".firefox
   ];
