@@ -176,6 +176,7 @@
     parted
     btrfs-progs
     proton-vpn
+    proton-vpn-cli
     wireguard-tools
     #inputs.helix.packages."${pkgs.stdenv.hostPlatform.system}".helix
     #inputs.nixpkgs-stable.packages."${pkgs.stdenv.hostPlatform.system}".firefox
