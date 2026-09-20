@@ -156,6 +156,7 @@
   # Install fox.
   #programs.firefox.enable = true;
   #programs.openclaw.enable = true;
+  programs.nix-ld.enable = true;
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
 

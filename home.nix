@@ -18,6 +18,7 @@
     alacritty
     brave
     btop
+    claude-code
     cowsay
     deadnix
     direnv
@@ -42,6 +43,7 @@
     #miro
     microsoft-edge
     nix-output-monitor
+    #nix-ld
     #signald
     obsidian
     #signal-desktop
@@ -60,6 +62,8 @@
     #    zellij
     #wineWow64Packages.staging
   ];
+  
+ 
   programs.obs-studio = {
     enable = true;
     plugins = with pkgs.obs-studio-plugins; [
