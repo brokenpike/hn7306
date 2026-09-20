@@ -1,6 +1,5 @@
-# Edit this configuration file to define what should be installed on
-# your system.  Help is available in the configuration.nix(5) man page
-# and in the NixOS manual (accessible by running ‘nixos-help’).
+# Base system configuration shared by every host. Machine-specific settings
+# live in hosts/<name>/, the desktop in gnome.nix, virtualization in vm.nix.
 
 {
   config,
@@ -12,130 +11,78 @@
 
 {
   imports = [
-    # Include the results of the hardware scan.
-    ./hardware-configuration.nix
+    ./gnome.nix
     ./vm.nix
   ];
 
-  # Bootloader.
-  boot.loader.systemd-boot.enable = true;
+  # --- Boot and memory ---
 
-  boot.kernelParams = [
-    "amd_iommu=off"
-    # GPU-addressable memory cap: 80 GiB, in 4 KiB pages (80 * 262144).
-    # Leaves room for a 24 GiB VM and the host. amdgpu.gttsize is deprecated
-    # and ttm.pages_limit is the effective limit.
-    "ttm.pages_limit=20971520"
-  ];
-  boot.loader.efi.canTouchEfiVariables = true;
-  # Kernel selection
-  boot.kernelPackages = pkgs.linuxPackages_latest;
-  # Strix halo related settings
-  nixpkgs.config.rocmSupport = true;
-  hardware.amdgpu.opencl.enable = true;
-  hardware.graphics.enable = true;
-  hardware.graphics.enable32Bit = true; # Replaced 'driSupport32Bit'
-  hardware.enableRedistributableFirmware = true;
-  services.lact.enable = true;
+  boot.loader = {
+    systemd-boot.enable = true;
+    efi.canTouchEfiVariables = true;
+  };
 
   # Compressed swap in RAM (no disk). Safety net against OOM when the
   # VM, model and host together approach total RAM.
   zramSwap.enable = true;
 
-  networking.hostName = "hn7306"; # Define your hostname.
-  # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
+  # --- Networking ---
 
-  # Configure network proxy if necessary
-  # networking.proxy.default = "http://user:password@proxy:port/";
-  # networking.proxy.noProxy = "127.0.0.1,localhost,internal.domain";
-
-  # Enable networking
   networking.networkmanager.enable = true;
   services.tailscale = {
-    # Enable tailscale at startup
     enable = true;
 
-    # If you would like to use a preauthorized key, set
+    # To use a preauthorized key, set:
     # authKeyFile = "/run/secrets/tailscale_key";
-    # Note: maximum expire time is 90 days
+    # Note: maximum expiry is 90 days
   };
-  # Set your time zone.
+  services.openssh.enable = true;
+
+  # --- Locale, time and Nix ---
+
   time.timeZone = "Europe/Oslo";
-  #  Enable flakes
+  i18n.defaultLocale = "en_US.UTF-8";
+
+  # Enable flakes
   nix.settings.experimental-features = [
     "nix-command"
     "flakes"
   ];
 
-  # Select internationalisation properties.
-  i18n.defaultLocale = "en_US.UTF-8";
-  # asusd for charge limiting
-  services.asusd.enable = true;
-  # Enable the X11 windowing system.
+  # --- Desktop and input ---
+
+  # Login screen. The sessions it offers come from gnome.nix (and later niri).
   services.xserver.enable = true;
-
-  # Enable the GNOME Desktop Environment.
   services.displayManager.gdm.enable = true;
-  services.desktopManager.gnome.enable = true;
 
-  services.desktopManager.gnome.extraGSettingsOverrides = ''
-    [org.gnome.mutter]
-    experimental-features=['scale-monitor-framebuffer', 'xwayland-native-scaling']
-  '';
-  # Configure keymap in X11
+  # Keyboard layout (X11 and Wayland)
   services.xserver.xkb = {
     layout = "no,us";
     variant = "";
   };
-  /*
-    services.ollama = {
-      enable = true;
-      package = pkgs.ollama-rocm; # or set pkgs.ollama-vulkan
-      #package = pkgs.ollama-vulkan;
-      loadModels = [
-        "ministral-3:14b"
-        "ministral-3:8b"
-        "mistral-medium-3.5"
-        "gpt-oss:120b"
-
-      ];
-      #rocmOverrideGfx = "11.5.1";
-      environmentVariables = {
-        # Hopefully helps with offloading layers to GPU, it didn't
-        HSA_ENABLE_SDMA = "0";
-        OLLAMA_DEBUG = "1";
-      };
-    };
-  */
-  services.flatpak.enable = true;
-
-  # Configure console keymap
   console.keyMap = "no";
 
-  # Enable CUPS to print documents.
-  services.printing.enable = true;
-  services.fwupd.enable = true;
-  # Enable sound with pipewire.
+  services.flatpak.enable = true;
+
+  # --- Audio and printing ---
+
+  # Sound via PipeWire instead of PulseAudio.
   services.pulseaudio.enable = false;
   security.rtkit.enable = true;
-  services.printing.drivers = [ pkgs.cnijfilter2 ];
   services.pipewire = {
     enable = true;
     alsa.enable = true;
     alsa.support32Bit = true;
     pulse.enable = true;
-    # If you want to use JACK applications, uncomment this
-    #jack.enable = true;
-
-    # use the example session manager (no others are packaged yet so this is enabled by default,
-    # no need to redefine it in your config for now)
-    #media-session.enable = true;
   };
 
-  # Enable touchpad support (enabled default in most desktopManager).
-  # services.xserver.libinput.enable = true;
+  # Printing via CUPS, with the Canon inkjet driver.
+  services.printing.enable = true;
+  services.printing.drivers = [ pkgs.cnijfilter2 ];
 
-  # Define a user account. Don't forget to set a password with ‘passwd’.
+  # --- Users ---
+
+  # Set a password with passwd after first boot.
   users.users.scott = {
     isNormalUser = true;
     description = "scott";
@@ -144,101 +91,33 @@
       "wheel"
       "render"
       "video"
-      "libvirtd"
-    ];
-    packages = with pkgs; [
-      #  thunderbird
     ];
   };
-  users.groups.libvirtd.members = [ "scott" ];
-  users.groups.kvm.members = [ "scott" ];
-  # Install fox.
-  #programs.firefox.enable = true;
-  #programs.openclaw.enable = true;
+
+  # --- Packages ---
+
+  # Run unpatched dynamically linked binaries
   programs.nix-ld.enable = true;
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
 
-  # List packages installed in system profile. To search, run:
-  # $ nix search wget
+  # System-wide packages
   environment.systemPackages = with pkgs; [
-    vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
-    wget
-    linux-wifi-hotspot
-    git
-    libdisplay-info
-    rocmPackages.rocm-smi
-    ntfs3g
-    cnijfilter2 # canon printer drivers
-    usbutils
-    libguestfs
-    guestfs-tools
-    parted
     btrfs-progs
+    git
+    linux-wifi-hotspot
+    ntfs3g
+    parted
     proton-vpn
     proton-vpn-cli
+    usbutils
+    vim
+    wget
     wireguard-tools
-    #inputs.helix.packages."${pkgs.stdenv.hostPlatform.system}".helix
-    #inputs.nixpkgs-stable.packages."${pkgs.stdenv.hostPlatform.system}".firefox
   ];
-  # fileSystems."/home/scott/Scratch" = {
-  #   device = "/dev/disk/by-uuid/4A8BF58F1A4A9FF7";
-  #   fsType = "ntfs3";
-  #   options = [
-  #     "uid=1000"
-  #     "gid=100"
-  #     "rw"
-  #     "nofail"
-  #     "x-systemd.automount"
-  #   ];
-  # };
-  fileSystems."/scratch" = {
-    device = "/dev/disk/by-uuid/7aaa6735-4290-4fde-8850-2c44cf3e865e";
-    fsType = "btrfs";
-    options = [
-      "compress=zstd:3"
-      "noatime"
-    ];
-  };
-  #fileSystems."/mnt/llms" = {
-  #   device = "/dev/disk/by-uuid/02abdfe8-34bd-4eba-80c8-a820d843c46c";
-  #   fsType = "btrfs";
-  #   options = [
-  #     "compress=zstd:3"
-  #     "noatime"
-  #     "nofail"
-  #     "x-systemd.automount"
-  #   ];
-  # };
-  # systemd.tmpfiles.rules = [
-  #   "d /mnt/llms 0775 scott users -"
-  # ];
-  # Some programs need SUID wrappers, can be configured further or are
-  # started in user sessions.
-  # programs.mtr.enable = true;
-  # programs.gnupg.agent = {
-  #   enable = true;
-  #   enableSSHSupport = true;
 
-  # };
-
-  # List services that you want to enable:
-
-  # Enable the OpenSSH daemon.
-  services.openssh.enable = true;
-
-  # Open ports in the firewall.
-  # networking.firewall.allowedTCPPorts = [ ... ];
-  # networking.firewall.allowedUDPPorts = [ ... ];
-  # Or disable the firewall altogether.
-  # networking.firewall.enable = false;
-
-  # This value determines the NixOS release from which the default
-  # settings for stateful data, like file locations and database versions
-  # on your system were taken. It‘s perfectly fine and recommended to leave
-  # this value at the release version of the first install of this system.
-  # Before changing this value read the documentation for this option
-  # (e.g. man configuration.nix or on https://nixos.org/nixos/options.html).
-  system.stateVersion = "25.11"; # Did you read the comment?
+  # Release this system's stateful defaults come from. Do not bump this when
+  # upgrading; see configuration.nix(5) before changing it.
+  system.stateVersion = "25.11";
 
 }

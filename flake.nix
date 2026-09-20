@@ -1,12 +1,11 @@
 {
-  description = "NixOS flake ASUS HN7306 Stix Halo Homemanager Unstable";
+  description = "NixOS flake for ASUS HN7306 (Strix Halo) with Home Manager, on unstable";
 
   inputs = {
-    # NixOS official package source, using the nixos-25.11 branch here
     determinate.url = "https://flakehub.com/f/DeterminateSystems/determinate/*";
+    # Main package set (unstable channel)
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     nixpkgs-stable.url = "github:NixOS/nixpkgs/nixos-26.05";
-    #helix.url = "github:helix-editor/helix/master";
     home-manager.url = "github:nix-community/home-manager";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
     nixos-hardware = {
@@ -14,10 +13,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
       #inputs.nixpkgs.follows = "nixpkgs-stable";
     };
-    # lmstudio = {
-    #   url = "github:Daaboulex/lmstudio-nix";
-    #   inputs.nixpkgs.follows = "nixpkgs";
-    # };
   };
 
   outputs =
@@ -31,21 +26,24 @@
       ...
     }@inputs:
     {
-      # Please replace my-nixos with your hostname
+      # Attribute name must match networking.hostName
       nixosConfigurations = {
         hn7306 = nixpkgs.lib.nixosSystem {
           specialArgs = { inherit inputs; };
           modules = [
             determinate.nixosModules.default
-            # Import the previous configuration.nix we used,
-            # so the old configuration file still takes effect
+            # Machine-specific settings (hostname, disks, hardware and GPU tuning)
+            ./hosts/hn7306
+            # Shared base configuration (imports the desktop and VM modules)
             ./configuration.nix
             home-manager.nixosModules.home-manager
             {
-              home-manager.useGlobalPkgs = true;
-              home-manager.useUserPackages = true;
-              home-manager.extraSpecialArgs = { inherit inputs; };
-              home-manager.users.scott = ./home.nix;
+              home-manager = {
+                useGlobalPkgs = true;
+                useUserPackages = true;
+                extraSpecialArgs = { inherit inputs; };
+                users.scott = ./home.nix;
+              };
             }
             #nixos-hardware.nixosModules.asus-proart-px13-hn7306eac
           ];

@@ -2,38 +2,39 @@
 
 {
 
-  # Enable dconf (System Management Tool)
+  # dconf backs virt-manager's saved settings
   programs.dconf.enable = true;
 
-  # Add user to libvirtd group
-  # added libvirtd group in configuration,nix
-  #users.users.$user.extraGroups = [ "libvirtd" ];
+  # Let the user manage VMs (libvirtd) and use hardware acceleration (kvm)
+  users.users.scott.extraGroups = [
+    "libvirtd"
+    "kvm"
+  ];
 
-  # Install necessary packages
+  # VM managers, guest tools and SPICE/Windows guest support
   environment.systemPackages = with pkgs; [
     adwaita-icon-theme
     dnsmasq
     gnome-boxes
+    guestfs-tools
+    libguestfs
     phodav
     quickemu
     spice
     spice-gtk
     spice-protocol
-    virtio-win
     virt-manager
     virt-viewer
+    virtio-win
     win-spice
   ];
 
-  # Manage the virtualisation services
+  # libvirt with TPM emulation (needed for Windows 11)
   virtualisation = {
     libvirtd = {
       enable = true;
       qemu = {
         swtpm.enable = true;
-        # depricated in nix 26.06
-        #ovmf.enable = true;
-        #ovmf.packages = [ pkgs.OVMFFull.fd ];
       };
     };
     spiceUSBRedirection.enable = true;

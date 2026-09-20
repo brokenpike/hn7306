@@ -1,4 +1,3 @@
-# config,
 {
   pkgs,
   inputs,
@@ -6,15 +5,11 @@
 }:
 
 {
-  # Home Manager needs a bit of information about you and the
-  # paths it should manage.
   home.username = "scott";
   home.homeDirectory = "/home/scott";
-  #home.sessionVariables.EDITOR = "hx";
-  # use select  "| sort " to make alphabetical
 
+  # Tip: in helix, select the list and pipe it through `sort` to alphabetize
   home.packages = with pkgs; [
-    #inputs.nixpkgs-stable.legacyPackages."x86_64-linux".btop
     alacritty
     brave
     btop
@@ -23,47 +18,28 @@
     deadnix
     direnv
     evince
-    #firefox
     fish
-    #gimp
-    gnomeExtensions.tiling-shell
     git-credential-manager
+    gnomeExtensions.tiling-shell # GNOME only
     grc
     htop
     hunspell
     hunspellDicts.nb-no
     hunspellDicts.th_TH
     hunspellDicts.uk_UA
-    #inkscape-with-extensions
-    #    kdePackages.kdenlive
-    #kitty # moved to programs.kitty
     languagetool
     lazygit
     libreoffice-stable
-    #miro
     microsoft-edge
     nix-output-monitor
-    #nix-ld
-    #signald
     obsidian
-    #signal-desktop
-    #stable.chromium
-    #stable.vim
-    #stable.zeroad
-    #tesseract
     tilix
     tmux
-    #vivaldi
     vscode
-    #wl-clipboard-rs# did not enable the hx system clipboard
-    wl-clipboard # space + "y" yanks to system clipboard
+    wl-clipboard # helix system clipboard (space + y yanks to it)
     zeroad
-    #zed-editor
-    #    zellij
-    #wineWow64Packages.staging
   ];
-  
- 
+
   programs.obs-studio = {
     enable = true;
     plugins = with pkgs.obs-studio-plugins; [
@@ -72,37 +48,6 @@
       obs-pipewire-audio-capture
     ];
   };
-  /*
-    programs.yazi = {
-      enable = true;
-      # flavors = {
-      #   catppuccin-mocha = pkgs.fetchFromGitHub {
-      #     owner = "yazi-rs";
-      #     repo = "flavors";
-      #     rev = "main";
-      #     sha256 = "sha256-9hw6+yDI1KMl0e33ZMnFlitS9eE/dG5qW8b+E7k5Oks=";
-      #     sparseCheckout = [ "catppuccin-mocha.yazi" ];
-      #   };
-      # };
-      # theme = {
-      #   flavor = {
-      #     dark = "dracula";
-      #     light = "gruvbox";
-      #   };
-      # };
-      shellWrapperName = "y";
-      settings = {
-        opener = {
-          edit = [
-            {
-              block = true;
-              run = "hx \"$@\"";
-            }
-          ];
-        };
-      };
-    };
-  */
   programs.helix = {
     enable = true;
     defaultEditor = true;
@@ -130,9 +75,7 @@
     };
   };
 
-  #programs.fish.enable = true;
   programs.fish = {
-    #defaultShell = true;
     enable = true;
     interactiveShellInit = ''
       set fish_greeting # Disable greeting
@@ -143,7 +86,7 @@
         name = "grc";
         src = pkgs.fishPlugins.grc.src;
       }
-      # Manually packaging and enable a plugin
+      # Plugin packaged by hand from GitHub
       {
         name = "z";
         src = pkgs.fetchFromGitHub {
@@ -166,10 +109,16 @@
   };
   programs.git = {
     enable = true;
-    settings.user.name = "brokenpike";
-    settings.user.email = "brokenpike@garmr.org";
-    settings.credential.helper = "manager";
-    settings.credential.credentialStore = "cache";
+    settings = {
+      user = {
+        name = "brokenpike";
+        email = "brokenpike@garmr.org";
+      };
+      credential = {
+        helper = "manager";
+        credentialStore = "cache";
+      };
+    };
     signing.format = "openpgp";
   };
   programs.kitty = {
@@ -178,14 +127,8 @@
       shell = "${pkgs.fish}/bin/fish";
     };
   };
-  # This value determines the Home Manager release that your
-  # configuration is compatible with. This helps avoid breakage
-  # when a new Home Manager release introduces backwards
-  # incompatible changes.
-  #
-  # You can update Home Manager without changing this value. See
-  # the Home Manager release notes for a list of state version
-  # changes in each release.
+  # Home Manager release this config was first written for. Do not bump this
+  # when upgrading; see the Home Manager release notes before changing it.
   home.stateVersion = "24.05";
 
   # Let Home Manager install and manage itself.
