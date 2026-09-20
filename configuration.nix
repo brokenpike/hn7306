@@ -21,16 +21,11 @@
   boot.loader.systemd-boot.enable = true;
 
   boot.kernelParams = [
-    # The kernel module parameter gttsize is a is deprecated and will be removed in the future.
-    #"amdgpu.gttsize=120000"
     "amd_iommu=off"
-    "amdgpu.gttsize=117760"
-    "ttm.pages_limit=33554432"
-
-    # specified as 4KiB pages: 120 GB GTT
-    #options ttm pages_limit=31457280
-    # specified as 4KiB pages: 60 GB pre-allocated
-    #options ttm page_pool_size 15728640
+    # GPU-addressable memory cap: 80 GiB, in 4 KiB pages (80 * 262144).
+    # Leaves room for a 24 GiB VM and the host. amdgpu.gttsize is deprecated
+    # and ttm.pages_limit is the effective limit.
+    "ttm.pages_limit=20971520"
   ];
   boot.loader.efi.canTouchEfiVariables = true;
   # Kernel selection
@@ -42,6 +37,10 @@
   hardware.graphics.enable32Bit = true; # Replaced 'driSupport32Bit'
   hardware.enableRedistributableFirmware = true;
   services.lact.enable = true;
+
+  # Compressed swap in RAM (no disk). Safety net against OOM when the
+  # VM, model and host together approach total RAM.
+  zramSwap.enable = true;
 
   networking.hostName = "hn7306"; # Define your hostname.
   # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
