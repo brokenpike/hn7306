@@ -25,8 +25,6 @@
     htop
     hunspell
     hunspellDicts.nb-no
-    hunspellDicts.th_TH
-    hunspellDicts.uk_UA
     languagetool
     lazygit
     libreoffice-stable
