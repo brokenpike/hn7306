@@ -62,7 +62,9 @@ Things worth remembering from it:
   The `nixpkgs-stable` and `nixos-hardware` inputs still exist but nothing
   references them; the commented `nixos-hardware` profile line
   (`asus-proart-px13-hn7306eac`) and the `follows = "nixpkgs-stable"` option
-  were deliberately kept in flake.nix.
+  were deliberately kept in flake.nix. The profile itself was later enabled in
+  hosts/hn7306/default.nix, pinned to an unmerged pull request (see "Internal
+  speakers").
 - **Pulling one package from stable:**
   `inputs.nixpkgs-stable.legacyPackages."x86_64-linux".<pkg>` (was used for
   btop, chromium, vim, zeroad and firefox).
@@ -118,10 +120,14 @@ redundant and was removed.
     configuration.nix              shared base for every host
     gnome.nix                      GNOME session (GDM stays in configuration.nix)
     vm.nix                         libvirt, Boxes, SPICE, Windows guest tools
-    home.nix                       Home Manager config for the user scott
-    hosts/hn7306/default.nix       hostname, /scratch mount, imports the two below
+    llm.nix                        options local.llm.*: the one model shared by Ollama, Hermes, OpenCode
+    hermes.nix                     Hermes Agent service (optional module)
+    home.nix                       Home Manager config for the user scott (incl. OpenCode)
+    AGENTS.md                      instructions for coding agents (OpenCode)
+    hosts/hn7306/default.nix       hostname, /scratch mount, local.llm values, imports
     hosts/hn7306/hardware-configuration.nix   generated, do not edit
     hosts/hn7306/strix-halo.nix    AMD/ROCm/GPU tuning, asusd, lact, fwupd
+    hosts/hn7306/ollama.nix        Ollama service, models on /scratch
 
 Conventions:
 
@@ -135,7 +141,8 @@ Conventions:
 - `statix` still warns about repeated `services` and `programs` keys in
   configuration.nix and home.nix. That is intentional: merging unrelated
   services into one block would read worse.
-- The `nixpkgs-stable` and `nixos-hardware` flake inputs are declared but unused.
+- The `nixpkgs-stable` flake input is declared but unused. `nixos-hardware` is
+  used by hosts/hn7306/default.nix and pinned to a pull request.
 
 **How to check a refactor changes nothing:** evaluate the config before and
 after and diff it, for example
@@ -355,7 +362,8 @@ things had to be fixed first (both in configuration.nix):
 
 **Routine.** Update everything except hermes-agent, which is unstable upstream
 and changes daily; update it on purpose with `nix flake update hermes-agent`.
-`nixpkgs-stable` and `nixos-hardware` are unused, so leave them out.
+`nixpkgs-stable` is unused, so leave it out. `nixos-hardware` is pinned to a
+commit (see "Internal speakers"), so updating it does nothing.
 
     cd ~/nixos-config
     nix flake update nixpkgs home-manager determinate
@@ -369,3 +377,87 @@ previous generation in the boot menu, or `git checkout flake.lock`. A new kernel
 needs a reboot to apply, and can occasionally regress on this GPU. A switch
 restarts Hermes and Ollama, so update between tasks.
 
+## Internal speakers: nixos-hardware PX13 profile, pinned to an unmerged PR (2026-09-21)
+
+**Hardware.** DMI reports ASUS ProArt PX13 HN7306EAC. The internal speakers use
+two TAS2783 amplifiers on SoundWire. Today the kernel log shows
+`soundwire sdw-master-0-1: Program transport params failed: -22` and
+`SmartAmp: ASoC error (-22)`, and PipeWire lists no internal speaker sink
+(only HDMI and USB devices). The dock (WD19) and the Jabra headset work.
+
+**The profile.** `nixos-hardware.nixosModules.asus-proart-px13-hn7306eac` fixes
+this with 17 kernel patches taken from the AUR `linux-cachyos-px13` package,
+and asserts kernel >= 7.0. It also sets `amd_pstate=active`, TPM2, iio sensors,
+early amdgpu, a battery-threshold service (which may overlap with asusd's
+charge limit) and ALSA UCM, WirePlumber and udev rules. The patches mean a
+locally built kernel, so every kernel bump would recompile it.
+
+**Tested 2026-09-21, and it fails.** With Linux 7.2.6, patch
+`0003-removed-unused-fields` does not apply to `sound/soc/codecs/tas2783-sdw.c`
+(2 of 4 hunks fail); with that patch dropped the next one fails too, so the
+series is entangled. Linux 7.0 and 7.1 were removed from nixpkgs as
+end-of-life, and older kernels fail the profile's assertion, so no kernel in
+nixpkgs works with the released profile. The newest nixos-hardware (9ebcb77)
+has the same patch list as the locked one (b2d7d02).
+
+**The fix: NixOS/nixos-hardware PR #2005** ("drop patches @ Linux 7.2", by
+toastal, opened 2026-08-22, still open and unreviewed on 2026-09-21). It applies
+the patch list only when the kernel is older than 7.2, because the driver fixes
+are now in the kernel, and moves the >= 7.0 assertion to the top of the profile.
+Two files, +35/-31. Evaluated against this config it gives 0 patches, the same
+kernel derivation as before (so still from the cache), no assertion failures and
+no warnings; the only rebuilds are the initrd and module set (early amdgpu).
+
+**Upstream.** The driver is changing in mainline. Mark Brown applied two
+tas2783-sdw fixes, tested on a PX13, to the sound tree branch `for-7.4` on
+2026-09-09 (commits 3e56757584d6 and f4ffa3820949), and an ACP70 ACPI match for
+tas2783 was applied for 7.2. Those reach mainline in the 7.4 merge window; there
+is no exact date, and the AUR patches conflict because the driver moved under
+them. Stable backports of individual fixes may arrive sooner in 7.2.x.
+
+**Enabled.** flake.nix pins the `nixos-hardware` input to the PR's exact commit
+(`github:toastal/nixos-hardware/9f6e7c04bd8624daacebd76a21c0e0137ecbc6af`, a
+third-party fork; the diff was read first and touches only the profile), and
+hosts/hn7306/default.nix imports
+`inputs.nixos-hardware.nixosModules.asus-proart-px13-hn7306eac`. Because the URL
+names a commit, `nix flake update nixos-hardware` does not move it.
+
+**Not yet verified on the machine:** that the speakers actually work. After
+`sudo nixos-rebuild switch` and a reboot (new kernel parameter `amd_pstate=active`
+and a new initrd), check:
+
+    wpctl status                                  # want "Internal Speakers (TAS2783)" among the sinks
+    journalctl -k -b | grep -iE 'tas2783|sdw'     # the -22 errors should be gone
+    cat /sys/class/power_supply/BAT*/charge_control_end_threshold    # still 80? the profile adds a battery-threshold service that may overlap asusd
+
+If it works, a "tested on 7.2.6" comment on the PR helps get it merged.
+
+**When the PR is merged:** change the input URL back to
+`github:NixOS/nixos-hardware`, run `nix flake update nixos-hardware`, and
+rebuild. If it is closed or the fork disappears, the input will fail to fetch;
+then either pin a released nixos-hardware once it supports 7.2 or remove the
+import (the speakers stop working, but a dock or headset still does).
+
+The profile also enables `amd_pstate=active`, TPM2, iio sensors and early
+amdgpu; the kernel patches themselves are gone on 7.2.
+
+**After the first rebuild and reboot (2026-09-21):**
+
+- **Speaker sink appears.** `wpctl status` now lists `Internal Speakers
+  (TAS2783)` (pipewire node `alsa_output.pci-0000_c4_00.5-platform-amd_sdw.pro-output-2`),
+  next to `Audio Coprocessor Pro`. WirePlumber's stored default sink was still
+  the old `...pro-output-0` ("Audio Coprocessor Pro"), so pick the speakers in
+  GNOME Settings > Sound, or `wpctl set-default <id>`.
+- **SmartAmp capture errors remain, but do not loop.** The kernel log still has
+  `SDW1-PIN4-CAPTURE-SmartAmp: ASoC error (-22)` / `Program transport params
+  failed` (40 lines in the first boot minutes, none in the following minutes),
+  clustered when something opens the profile's `Audio Coprocessor Pro` capture
+  sources, for example the Sound settings panel. Treat it as noise if playback
+  works; if it does not, this is the place to look.
+- **The profile reset the charge limit to 100%.** Its `battery-charge-threshold`
+  service (asus/battery.nix in nixos-hardware) writes the limit at boot and
+  after suspend/hibernate, defaulting to 100, so `charge_control_end_threshold`
+  and `asusctl battery info` both read 100% instead of asusd's 80%. Fixed with
+  `hardware.asus.battery.chargeUpto = 80` in hosts/hn7306/default.nix. Until
+  that is rebuilt, set it by hand with `asusctl battery limit 80`.
+- Ollama still found the GPU after the reboot (`library=ROCm compute=gfx1151`).

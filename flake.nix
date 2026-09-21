@@ -9,7 +9,11 @@
     home-manager.url = "github:nix-community/home-manager";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
     nixos-hardware = {
-      url = "github:NixOS/nixos-hardware";
+      # Pinned to an unmerged pull request (NixOS/nixos-hardware#2005) that
+      # makes the ProArt PX13 profile build on Linux 7.2, where its kernel
+      # patches no longer apply. When it is merged, switch back to
+      # "github:NixOS/nixos-hardware" and run `nix flake update nixos-hardware`.
+      url = "github:toastal/nixos-hardware/9f6e7c04bd8624daacebd76a21c0e0137ecbc6af";
       inputs.nixpkgs.follows = "nixpkgs";
       #inputs.nixpkgs.follows = "nixpkgs-stable";
     };
@@ -50,7 +54,6 @@
                 users.scott = ./home.nix;
               };
             }
-            #nixos-hardware.nixosModules.asus-proart-px13-hn7306eac
           ];
         };
       };
