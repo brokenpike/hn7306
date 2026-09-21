@@ -161,3 +161,119 @@ run `nixfmt --check` and `nix build .#nixosConfigurations.hn7306.config.system.b
   hostname and mounts, and a second `nixosConfigurations` entry in flake.nix
   (a small `mkHost` helper avoids repeating the module list). The username
   `scott` is hard-coded in home.nix, vm.nix and configuration.nix.
+
+## Hermes Agent with Ollama (2026-09-20)
+
+**What was set up:**
+
+- flake.nix has a `hermes-agent` input (`github:NousResearch/hermes-agent`) and
+  its `nixosModules.default`. It brings its own pinned nixpkgs and does not
+  follow ours. The first build downloads about 1.4 GiB and builds about 1,200
+  small derivations (npm/Python packages); there is no Nous binary cache.
+- hosts/hn7306/ollama.nix runs Ollama on the ROCm build with models stored in
+  `/scratch/ollama` (root has only about 100 GB free) and
+  `OLLAMA_CONTEXT_LENGTH=65536`. Note `services.ollama.models` was renamed to
+  `modelsDir`.
+- hermes.nix runs Hermes as a native service under its own `hermes` user, state
+  in `/var/lib/hermes`, pointed at `http://127.0.0.1:11434/v1`. The default model
+  is `qwen3.6:35b` (a general 35B MoE, about 3B active, 22 GB, 256K context,
+  tools and thinking) with `context_length = 65536`, equal to the server's
+  `OLLAMA_CONTEXT_LENGTH`. It started as `gpt-oss:120b` (65 GB, from the old
+  Ollama config). Container mode was not used because it needs Docker.
+- **Hermes refuses any model with a context under 64,000 tokens**
+  (`MINIMUM_CONTEXT_LENGTH` in agent/model_metadata.py). `qwen2.5-coder:32b`
+  (trained context 32,768) therefore does not work, and setting a smaller
+  `context_length` makes chat fail immediately. Lying to Hermes with a larger
+  value would push the model past its trained context.
+
+**First run, after `sudo nixos-rebuild switch`:**
+
+    ollama pull qwen3.6:35b           # nothing is downloaded automatically
+    journalctl -u hermes-agent -f     # is the gateway healthy?
+    sudo -u hermes -H hermes chat     # run it as the service user, see below
+
+**Always run the CLI as the `hermes` user.** Hermes forces `state.db` (and its
+WAL files) to owner-only `0600` on every start (`_secure_state_db_files` in
+hermes_state.py), with no setting to change it. Run as `scott`, even as a member
+of the `hermes` group, it prints "Session store unavailable" and does not save
+sessions, memory or past-session search. The NixOS module's shared-group model
+does not work for the database in native mode; upstream's container mode avoids
+this by running the CLI as the service user inside the container. Running via
+`sudo -u hermes` also keeps the agent's commands under the unprivileged
+`hermes` user, not `scott`. `scott` is therefore no longer in the `hermes`
+group. If typing the password each time gets tiresome, a sudo rule letting
+`scott` run commands as `hermes` without a password is an option, but it is an
+auth-policy change, so it was not added.
+
+Verified on 2026-09-20: `hermes chat -Q --oneshot -q ...` answered from
+`gpt-oss:120b`. The first request took about 2 minutes while Ollama loaded the
+65 GB model.
+
+**The flake input moves quickly.** hermes-agent was locked at `b787fb9`, then
+`afc3b7c`, then `a782e2e` within one day. Update it deliberately with
+`nix flake update hermes-agent`, check that it evaluates
+(`nix build .#nixosConfigurations.hn7306.config.system.build.toplevel --dry-run`),
+rebuild, and test before committing the new lock.
+
+**Things to know:**
+
+- The service runs `hermes gateway`. No messaging platform is configured, so
+  it is untested whether it idles quietly or restarts in a loop. Check the
+  journal. Tokens for Telegram/Slack/etc. go in a file outside the Nix store,
+  referenced with `services.hermes-agent.environmentFiles`; never in Nix options.
+- Isolation: `ProtectSystem=strict`, `NoNewPrivileges`, write access only to its
+  own state directory. `ProtectHome` is off, but `/home/scott` is mode 0700, so
+  the `hermes` user cannot read it.
+- Upstream calls this a "Tier 2" platform where commits to `main` may break
+  it. It is pinned by flake.lock; update deliberately with
+  `nix flake update hermes-agent` and rebuild.
+- Ollama unloads an idle model after about 5 minutes by default, so a 60 GB
+  model reloads on the next request. `OLLAMA_KEEP_ALIVE` changes that, at the
+  cost of holding the memory.
+- The 80 GiB GPU cap (see the GPU section) covers the model and its KV cache. A
+  64K context on a 120B model may need the cap raised to 88 GiB.
+- To switch to llama.cpp later, replace ollama.nix with `services.llama-cpp`
+  (with `--jinja`) and change `base_url` and the model name in hermes.nix.
+
+## Ollama silently fell back to CPU after a rebuild (2026-09-21)
+
+**Symptom:** Everything was slow. `ollama ps` showed `100% CPU` and the GPU's
+memory use stayed near 1 GiB. The Ollama log had, at the working start (20:23),
+`inference compute … library=ROCm compute=gfx1151 … AMD Radeon 8060S`, and at
+the restart during a later rebuild (21:57), only `library=cpu`. Ollama
+discovers GPUs once at start and never retries, so every model after that ran
+on CPU. `rocm-smi` showed the GPU healthy and the environment was unchanged.
+Probable cause (not proven): `/dev/kfd` and the render node were recreated
+during the rebuild at that same second, so Ollama started without them.
+
+**After any rebuild that restarts Ollama, check the GPU:**
+
+    journalctl -u ollama --no-pager -o cat | grep 'inference compute' | tail -1   # want library=ROCm
+    ollama ps                                                                     # want 100% GPU
+
+If it says cpu, `sudo systemctl restart ollama` fixed it. The next rebuild
+restarted Ollama and found the GPU again. If it recurs, order the unit after
+`systemd-udev-settle.service`.
+
+**Measured 2026-09-21** (Ollama 0.34.2, ROCm, `OLLAMA_NUM_PARALLEL=2`,
+context 65,536, Windows VM running):
+
+| Model | Weights | GPU memory in use | Generation | Prompt reading (6.4-6.7K tok) |
+|---|---|---|---|---|
+| `qwen3.6:35b` on CPU | 22 GB | not on GPU | 20 tok/s | 79 tok/s |
+| `qwen3.6:35b` | 22 GB | 26 GiB | 57-74 tok/s | 997 tok/s |
+| `qwen3-coder:30b` | 18 GB | 31 GiB | 49-60 tok/s | 1,242 tok/s |
+
+Prompt reading is what makes an agent feel slow on CPU: a 64K prompt would take
+roughly 14 minutes at 79 tok/s. `qwen3.6:35b` needs less memory than the smaller
+`qwen3-coder:30b` because its attention cache is much smaller. With the VM
+(24 GiB) and the model loaded, the machine used about 59 GiB of 124.
+
+**Model choice.** General MoE `qwen3.6:35b` was chosen as the one model shared by
+Hermes and OpenCode over the coder-only `qwen3-coder:30b`. Reported benchmarks
+for the coder variant are lower on general knowledge and reasoning (MMLU-Pro
+70.6 vs 78.4, GPQA 51.6 vs 70.4 against Qwen3-30B-A3B-Instruct-2507), which
+matters for Hermes's non-coding work. Both must use the same model name, or
+Ollama reloads the model on every switch. Its coding quality against the coder
+model is untested beyond a few small prompts. Also installed: `gpt-oss:120b`,
+`gpt-oss:20b`, `gemma4:31b`, `qwen2.5-coder:32b` (unusable with Hermes).

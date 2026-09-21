@@ -13,6 +13,9 @@
       inputs.nixpkgs.follows = "nixpkgs";
       #inputs.nixpkgs.follows = "nixpkgs-stable";
     };
+    # Tier 2 upstream: commits to main can break it, so update it on purpose
+    # (nix flake update hermes-agent). Deliberately does not follow our nixpkgs.
+    hermes-agent.url = "github:NousResearch/hermes-agent";
   };
 
   outputs =
@@ -23,6 +26,7 @@
       nixpkgs-stable,
       home-manager,
       nixos-hardware,
+      hermes-agent,
       ...
     }@inputs:
     {
@@ -32,6 +36,7 @@
           specialArgs = { inherit inputs; };
           modules = [
             determinate.nixosModules.default
+            hermes-agent.nixosModules.default
             # Machine-specific settings (hostname, disks, hardware and GPU tuning)
             ./hosts/hn7306
             # Shared base configuration (imports the desktop and VM modules)
