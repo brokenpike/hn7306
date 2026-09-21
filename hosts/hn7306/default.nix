@@ -12,6 +12,23 @@ _:
   # Must match the nixosConfigurations attribute name in flake.nix.
   networking.hostName = "hn7306";
 
+  # The one model Ollama, Hermes and OpenCode share. Change it here, then pull
+  # it with `ollama pull <name>` and rebuild.
+  local.llm = {
+    # A general-purpose MoE model (about 3B active) that is also strong at
+    # agentic coding.
+    model = "qwen3.6:35b";
+
+    # Other installed models OpenCode can be switched to. Switching loads the
+    # other model, so avoid mixing models between the two tools.
+    extraModels = [
+      "gemma4:31b"
+      "gpt-oss:120b"
+      "gpt-oss:20b"
+      "qwen3-coder:30b"
+    ];
+  };
+
   # Btrfs data disk
   fileSystems."/scratch" = {
     device = "/dev/disk/by-uuid/7aaa6735-4290-4fde-8850-2c44cf3e865e";

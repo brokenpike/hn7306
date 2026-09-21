@@ -277,3 +277,62 @@ matters for Hermes's non-coding work. Both must use the same model name, or
 Ollama reloads the model on every switch. Its coding quality against the coder
 model is untested beyond a few small prompts. Also installed: `gpt-oss:120b`,
 `gpt-oss:20b`, `gemma4:31b`, `qwen2.5-coder:32b` (unusable with Hermes).
+
+## OpenCode (2026-09-21)
+
+Set up in home.nix with `programs.opencode` (Home Manager), which writes
+`~/.config/opencode/opencode.json`. It uses the same Ollama server and the same
+model as Hermes: `ollama/qwen3.6:35b`, with `limit.context = 65536`.
+
+- **Same model name in both tools.** With `OLLAMA_MAX_LOADED_MODELS=1`, two
+  different names make Ollama unload and reload the model on every switch.
+  `small_model` is set to the same model for that reason too. Both now read
+  `local.llm.model` (see "Changing the model" below).
+- **Runs as `scott`**, unlike Hermes, so the permissions matter. Edits, web
+  fetches and web searches ask first; bash asks first except `git status`,
+  `git diff` and `git log`; `git push`, `rm` and `sudo` are denied. Reading files
+  is allowed by default except `.env`. `share = "disabled"` stops sessions being
+  uploaded to opencode.ai and `autoupdate = false` because nixpkgs pins the
+  version. Bash rules are matched top to bottom with the last match winning;
+  the generated JSON sorts keys, so `"*"` comes first.
+- **Compound commands need every part allowed.** A piped command such as
+  `git status --short | grep -c x` is rejected because `grep` falls under the
+  `"*": ask` rule. In the interactive UI that shows as a prompt.
+- **Tested in an isolated sandbox** (own XDG directories, real binary 1.18.31,
+  real config): it answered from `qwen3.6:35b`; `git status --short` ran
+  unprompted; `rm` was denied and the file survived. Each call took about 40
+  seconds in that run, most of it start-up.
+- **Second computer:** the config points at `127.0.0.1:11434`, so a machine
+  without a local Ollama needs its own endpoint (or the enclave's) in its
+  OpenCode settings. A host that leaves `local.llm.model` null gets no OpenCode.
+
+## Changing the model (2026-09-21)
+
+The model and context are defined once, per host, as the options
+`local.llm.model`, `local.llm.contextLength` (default 65536) and
+`local.llm.extraModels` (options in llm.nix, values in
+hosts/hn7306/default.nix). `ollama.nix` (`OLLAMA_CONTEXT_LENGTH`), `hermes.nix`
+(`default`, `context_length`) and `home.nix` (OpenCode `model`, `small_model`,
+model list) all read them, so nothing is duplicated any more.
+
+**To switch model permanently:**
+
+    ollama pull <model>      # nothing downloads automatically
+    # edit local.llm.model in hosts/hn7306/default.nix, then:
+    sudo nixos-rebuild switch --flake ~/nixos-config
+
+Hermes needs a context of at least 64,000 tokens; an assertion in hermes.nix
+fails the build with a clear message if `contextLength` is lower.
+
+**Without a rebuild** (session only): `sudo -u hermes -H hermes chat -m <model>`
+or `/model custom:<name>` in a Hermes chat; `opencode -m ollama/<model>` or
+`/models` in OpenCode, but only for models listed in `extraModels`, because
+OpenCode does not discover models (without any declared it reports "Provider
+not found"). Ollama serves any installed model on request, loading it on
+demand; nothing is loaded when idle, and each switch to another model reloads
+it. Neither tool can "follow whatever Ollama has loaded".
+
+Tested by evaluation: overriding `local.llm.model` changed Ollama, Hermes and
+OpenCode together; `contextLength = 32768` failed the assertion; a null model
+turned OpenCode off without error.
+

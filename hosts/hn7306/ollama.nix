@@ -1,5 +1,5 @@
 # Local LLM server: Ollama on the ROCm build. Hermes (hermes.nix) talks to it.
-{ pkgs, ... }:
+{ config, pkgs, ... }:
 
 {
   services.ollama = {
@@ -13,9 +13,9 @@
     group = "ollama";
 
     environmentVariables = {
-      # Agents need a long context; the default is far too small. Hermes
-      # refuses models below 64,000 tokens.
-      OLLAMA_CONTEXT_LENGTH = "65536";
+      # Agents need a long context; the default is far too small. Set in
+      # llm.nix, and Hermes refuses models below 64,000 tokens.
+      OLLAMA_CONTEXT_LENGTH = toString config.local.llm.contextLength;
 
       # Hermes and OpenCode share one model and are often busy at once. Two
       # slots stop them queueing behind each other; each slot holds its own

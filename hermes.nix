@@ -5,9 +5,24 @@
 # Never put secrets in these options: they end up in the world-readable Nix
 # store. Messaging tokens belong in a file outside the store, referenced with
 # services.hermes-agent.environmentFiles.
-_:
+{ config, ... }:
 
+let
+  llm = config.local.llm;
+in
 {
+  assertions = [
+    {
+      assertion = llm.model != null;
+      message = "hermes.nix needs local.llm.model to be set for this host.";
+    }
+    {
+      # Hermes rejects smaller windows at chat time (MINIMUM_CONTEXT_LENGTH).
+      assertion = llm.contextLength >= 64000;
+      message = "Hermes refuses models with a context below 64,000 tokens; raise local.llm.contextLength.";
+    }
+  ];
+
   services.hermes-agent = {
     enable = true;
 
@@ -22,14 +37,10 @@ _:
       # built-in providers (including Nous Portal) for its helper tasks.
       provider = "custom";
       base_url = "http://127.0.0.1:11434/v1";
-      # A general-purpose MoE model (about 3B active) that is also strong at
-      # agentic coding. Pull it once with: ollama pull qwen3.6:35b
-      default = "qwen3.6:35b";
-      # Hermes refuses models with a context below 64,000 tokens (so
-      # qwen2.5-coder:32b, at 32,768, does not work) and cannot read the value
-      # from Ollama. Keep this equal to OLLAMA_CONTEXT_LENGTH in
-      # hosts/hn7306/ollama.nix.
-      context_length = 65536;
+      # Both come from llm.nix and are set per host. Hermes cannot read the
+      # context from Ollama and would otherwise assume 256,000 tokens.
+      default = llm.model;
+      context_length = llm.contextLength;
     };
   };
 }

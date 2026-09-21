@@ -1,9 +1,14 @@
 {
+  lib,
+  osConfig,
   pkgs,
   inputs,
   ...
 }:
 
+let
+  llm = osConfig.local.llm;
+in
 {
   home.username = "scott";
   home.homeDirectory = "/home/scott";
@@ -123,6 +128,61 @@
     enable = true;
     settings = {
       shell = "${pkgs.fish}/bin/fish";
+    };
+  };
+
+  # OpenCode coding agent, using the local Ollama server (see
+  # hosts/hn7306/ollama.nix). It runs as scott with scott's permissions, unlike
+  # Hermes, so it asks before editing files or running commands. The model and
+  # context come from llm.nix; a host without a local model gets no OpenCode.
+  programs.opencode = lib.mkIf (llm.model != null) {
+    enable = true;
+    settings = {
+      "$schema" = "https://opencode.ai/config.json";
+
+      # Hermes uses the same model on the same server. Different names would
+      # make Ollama unload and reload the model on every switch, so both read
+      # local.llm.model. It also serves the small helper tasks.
+      model = "ollama/${llm.model}";
+      small_model = "ollama/${llm.model}";
+
+      autoupdate = false; # the version comes from nixpkgs
+      share = "disabled"; # never upload sessions to opencode.ai
+
+      provider.ollama = {
+        npm = "@ai-sdk/openai-compatible";
+        name = "Ollama (local)";
+        options.baseURL = "http://127.0.0.1:11434/v1";
+        # OpenCode only offers the models declared here. The context equals the
+        # server's OLLAMA_CONTEXT_LENGTH, so it matches Hermes.
+        models = lib.genAttrs (lib.unique ([ llm.model ] ++ llm.extraModels)) (m: {
+          name = "${m} (local)";
+          limit = {
+            context = llm.contextLength;
+            output = 16384;
+          };
+        });
+      };
+
+      # Reading files is allowed by default (except .env). Rules are matched
+      # top to bottom and the last match wins.
+      permission = {
+        edit = "ask";
+        webfetch = "ask";
+        websearch = "ask";
+        bash = {
+          "*" = "ask";
+          "git diff" = "allow";
+          "git diff *" = "allow";
+          "git log" = "allow";
+          "git log *" = "allow";
+          "git status" = "allow";
+          "git status *" = "allow";
+          "git push *" = "deny";
+          "rm *" = "deny";
+          "sudo *" = "deny";
+        };
+      };
     };
   };
   # Home Manager release this config was first written for. Do not bump this

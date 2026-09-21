@@ -12,6 +12,7 @@
 {
   imports = [
     ./gnome.nix
+    ./llm.nix
     ./vm.nix
   ];
 
