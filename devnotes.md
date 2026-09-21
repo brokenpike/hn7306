@@ -336,3 +336,36 @@ Tested by evaluation: overriding `local.llm.model` changed Ollama, Hermes and
 OpenCode together; `contextLength = 32768` failed the assertion; a null model
 turned OpenCode off without error.
 
+
+## Updating daily (2026-09-21)
+
+Daily `nix flake update` plus a rebuild is fine on nixos-unstable, but two
+things had to be fixed first (both in configuration.nix):
+
+- **Boot partition.** `/boot` is only 446 MB (58% used with 27 generations and
+  no limit). Each generation keeps a kernel and initrd there, and
+  `linuxPackages_latest` brings a new one every few days, so a full partition
+  would make a rebuild fail at the bootloader step. Now
+  `boot.loader.systemd-boot.configurationLimit = 10`.
+- **Garbage collection.** It was off, and the root disk was 81% full (store
+  99 GB). Now `nix.gc` runs weekly with `--delete-older-than 14d`, and
+  `nix.optimise.automatic` deduplicates the store. NixOS's gc options do work
+  with Determinate Nix here (they create the `nix-gc` service and timer).
+  Rollback is limited to 14 days and 10 boot entries.
+
+**Routine.** Update everything except hermes-agent, which is unstable upstream
+and changes daily; update it on purpose with `nix flake update hermes-agent`.
+`nixpkgs-stable` and `nixos-hardware` are unused, so leave them out.
+
+    cd ~/nixos-config
+    nix flake update nixpkgs home-manager determinate
+    nix build .#nixosConfigurations.hn7306.config.system.build.toplevel --dry-run
+    sudo nixos-rebuild switch --flake ~/nixos-config
+    ollama ps                          # after a request: want 100% GPU
+    git add flake.lock && git commit   # only after it works
+
+If an update goes wrong: `sudo nixos-rebuild switch --rollback`, pick the
+previous generation in the boot menu, or `git checkout flake.lock`. A new kernel
+needs a reboot to apply, and can occasionally regress on this GPU. A switch
+restarts Hermes and Ollama, so update between tasks.
+

@@ -19,7 +19,12 @@
   # --- Boot and memory ---
 
   boot.loader = {
-    systemd-boot.enable = true;
+    systemd-boot = {
+      enable = true;
+      # Every generation keeps a kernel and initrd on the small (446 MB) boot
+      # partition. Unlimited entries would eventually make a rebuild fail there.
+      configurationLimit = 10;
+    };
     efi.canTouchEfiVariables = true;
   };
 
@@ -44,11 +49,22 @@
   time.timeZone = "Europe/Oslo";
   i18n.defaultLocale = "en_US.UTF-8";
 
-  # Enable flakes
-  nix.settings.experimental-features = [
-    "nix-command"
-    "flakes"
-  ];
+  nix = {
+    # Enable flakes
+    settings.experimental-features = [
+      "nix-command"
+      "flakes"
+    ];
+
+    # Daily flake updates add generations quickly and the root disk has little
+    # room. Keep two weeks of rollback, then collect and deduplicate weekly.
+    gc = {
+      automatic = true;
+      dates = "weekly";
+      options = "--delete-older-than 14d";
+    };
+    optimise.automatic = true;
+  };
 
   # --- Desktop and input ---
 
