@@ -369,8 +369,43 @@ commit (see "Internal speakers"), so updating it does nothing.
     nix flake update nixpkgs home-manager determinate
     nix build .#nixosConfigurations.hn7306.config.system.build.toplevel --dry-run
     sudo nixos-rebuild switch --flake ~/nixos-config
-    ollama ps                          # after a request: want 100% GPU
-    git add flake.lock && git commit   # only after it works
+
+**After every switch, check the three things that break silently (no error, just
+wrong behaviour):**
+
+    ollama ps                                                      # want 100% GPU, not CPU
+    sudo -u hermes -H hermes chat -Q --oneshot -q "Reply with exactly the single word: pong"
+    wpctl status | grep -i "Internal Speakers"                     # still listed as a sink
+    cat /sys/class/power_supply/BAT0/charge_control_end_threshold  # still 80
+
+Then, only once all four pass:
+
+    git add flake.lock && git commit
+
+**Why each of these can break on an ordinary update, even though nothing in
+this repo changed:**
+
+- **Ollama on CPU:** the GPU-discovery race from "Ollama silently fell back to
+  CPU" above. Any rebuild that restarts Ollama (most do, since
+  `environment.systemPackages`/`ollama.package` versions bump with nixpkgs) can
+  retrigger it.
+- **Hermes:** `hermes-agent` has its own pinned nixpkgs and does not follow
+  ours, so an ordinary `nixpkgs`/`home-manager` update cannot break it. It
+  still needs updating deliberately and testing on its own
+  (`nix flake update hermes-agent`, then the same chat check) because upstream
+  calls it unstable and changes daily.
+- **Speakers:** the nixos-hardware pin is to an exact commit
+  (`github:toastal/nixos-hardware/9f6e7c0…`), which `nix flake update` cannot
+  move, and its patches apply only below kernel 7.2, so any future kernel in
+  nixpkgs (7.2 and up) should keep getting zero patches. A kernel bump is still
+  worth re-checking once, since it is the one thing that changes the actual
+  sound driver. Watch [nixos-hardware PR #2005](https://github.com/NixOS/nixos-hardware/pull/2005)
+  for merging; once merged, switch the input back to
+  `github:NixOS/nixos-hardware` and run `nix flake update nixos-hardware`.
+- **Battery limit:** the profile's own service re-writes the threshold at every
+  boot and after every suspend/resume, defaulting to 100%; `chargeUpto = 80` in
+  hosts/hn7306/default.nix overrides that default, but a future edit to that
+  option (or dropping it) silently reverts to 100%.
 
 If an update goes wrong: `sudo nixos-rebuild switch --rollback`, pick the
 previous generation in the boot menu, or `git checkout flake.lock`. A new kernel
