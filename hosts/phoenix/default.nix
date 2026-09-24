@@ -1,4 +1,4 @@
-# Settings specific to the AMD7640U laptop.
+# Settings specific to the Phoenix laptop.
 { inputs, pkgs, ... }:
 
 {
@@ -7,7 +7,7 @@
     ./hardware-configuration.nix
   ];
 
-  networking.hostName = "amd7640u";
+  networking.hostName = "phoenix";
 
   boot.kernelPackages = pkgs.linuxPackages_latest;
 }

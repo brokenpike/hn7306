@@ -59,7 +59,7 @@
       # Attribute names must match each host's networking.hostName.
       nixosConfigurations = {
         hn7306 = mkHost ./hosts/hn7306;
-        amd7640u = mkHost ./hosts/amd7640u;
+        phoenix = mkHost ./hosts/phoenix;
       };
     };
 }
