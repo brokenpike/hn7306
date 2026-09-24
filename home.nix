@@ -38,6 +38,7 @@ in
     obsidian
     tilix
     tmux
+    uv
     vscode
     wl-clipboard # helix system clipboard (space + y yanks to it)
     zeroad
@@ -132,7 +133,7 @@ in
   };
 
   # OpenCode coding agent, using the local Ollama server (see
-  # hosts/hn7306/ollama.nix). It runs as scott with scott's permissions, unlike
+  # hosts/<name>/ollama.nix). It runs as scott with scott's permissions, unlike
   # Hermes, so it asks before editing files or running commands. The model and
   # context come from llm.nix; a host without a local model gets no OpenCode.
   programs.opencode = lib.mkIf (llm.model != null) {
@@ -155,13 +156,21 @@ in
         options.baseURL = "http://127.0.0.1:11434/v1";
         # OpenCode only offers the models declared here. The context equals the
         # server's OLLAMA_CONTEXT_LENGTH, so it matches Hermes.
-        models = lib.genAttrs (lib.unique ([ llm.model ] ++ llm.extraModels)) (m: {
-          name = "${m} (local)";
-          limit = {
-            context = llm.contextLength;
-            output = 16384;
-          };
-        });
+        models = lib.genAttrs (lib.unique ([ llm.model ] ++ llm.extraModels)) (
+          m:
+          {
+            name = "${m} (local)";
+            limit = {
+              context = llm.contextLength;
+              output = 16384;
+            };
+          }
+          # Set in llm.nix, and only on the default model: the extra models may
+          # not accept reasoning levels.
+          // lib.optionalAttrs (m == llm.model && llm.reasoningEffort != null) {
+            options.reasoningEffort = llm.reasoningEffort;
+          }
+        );
       };
 
       # Reading files is allowed by default (except .env). Rules are matched

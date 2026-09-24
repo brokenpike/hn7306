@@ -1,5 +1,5 @@
 # The local LLM that Ollama, Hermes and OpenCode share. Set the values once per
-# host (see hosts/hn7306/default.nix); ollama.nix, hermes.nix and home.nix read
+# host (in hosts/<name>/default.nix); ollama.nix, hermes.nix and home.nix read
 # them, so a model change is a one-line edit.
 { lib, ... }:
 
@@ -24,6 +24,23 @@
         Context size in tokens: the Ollama server's OLLAMA_CONTEXT_LENGTH, and
         what Hermes and OpenCode are told the model supports. Hermes refuses
         anything below 64,000.
+      '';
+    };
+
+    reasoningEffort = lib.mkOption {
+      type = lib.types.nullOr (
+        lib.types.enum [
+          "low"
+          "medium"
+          "high"
+        ]
+      );
+      default = null;
+      example = "low";
+      description = ''
+        How long a reasoning model such as gpt-oss thinks before answering, in
+        both Hermes and OpenCode. Every agent step pays for it, so a slow GPU
+        wants "low". Applies to `model` only. Null keeps each tool's default.
       '';
     };
 

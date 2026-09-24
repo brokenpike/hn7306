@@ -560,3 +560,50 @@ wiring up a static secret. A server offering "header auth" as a legacy
 fallback does not imply that header takes an API key; here it took a
 password. Prefer whatever OAuth support the harness has, if the server
 offers OAuth at all.
+
+## Ollama, Hermes and OpenCode on phoenix (2026-09-24)
+
+phoenix (Framework 13, Ryzen 5 7640U, Radeon 760M, 38 GiB RAM, 512 MiB VRAM
+carve-out) runs its own Ollama for now, so both agents work offline and without
+hn7306. The plan is to point it at hn7306 later over a mesh network (nebula or
+Tailscale), with a Claude account as a further source of tokens. That will need
+a base URL option in llm.nix, since hermes.nix and home.nix hard-code
+`http://127.0.0.1:11434/v1`.
+
+- **Vulkan, not ROCm.** The 760M is gfx1103, which ROCm does not support without
+  `HSA_OVERRIDE_GFX_VERSION`. `pkgs.ollama-vulkan` runs on it as is and comes
+  from the cache.
+- **Model `gpt-oss:20b`** (about 14 GB). hn7306's `qwen3.6:35b` is about 23 GB
+  and would leave too little of the 38 GiB for the desktop. gpt-oss supports tool
+  calling, which Hermes needs.
+- **`OLLAMA_NUM_PARALLEL=1`** (hn7306 uses 2): each slot holds its own 64K
+  context, and RAM is short. Hermes and OpenCode queue instead of running at
+  once.
+- **`OLLAMA_IGPU_ENABLE=1`.** Without it, Vulkan finds the 760M but Ollama
+  logs `dropping integrated GPU; to enable, set OLLAMA_IGPU_ENABLE=1` and runs
+  `library=cpu`. That happened on the first rebuild.
+- **Speed, measured with `ollama run --verbose`.** Generation is about 13
+  tokens/s, which is what the 760M's memory bandwidth allows. Prompt reading
+  was 240 tokens/s (12K tokens in 50 s). Agents send 10-20K token prompts, so
+  reading them is most of the wait.
+- **`local.llm.reasoningEffort = "low"`** (new option in llm.nix, read by
+  hermes.nix and home.nix). At its default of medium, gpt-oss spent 477 tokens
+  thinking about a haiku. Hermes sends it as `reasoning_effort` (its custom
+  provider asks for medium when unset); OpenCode gets it as a model option on
+  the default model only. Null on hn7306, so nothing changes there. Hermes'
+  `settings` type does not resolve `lib.mkIf`, so conditional keys there use
+  `lib.optionalAttrs`.
+- **Flash attention does not help here; removed.** With
+  `OLLAMA_FLASH_ATTENTION=1` (log confirmed `flash_attn = enabled` on Vulkan),
+  prompt reading was 236.6 tokens/s against 239.9 without it, and generation
+  was unchanged. Test with new text each run: Ollama caches the prompt, and a
+  repeated 12K-token prompt "reads" in 96 ms, which is meaningless as a
+  benchmark. The same cache is why only an agent's first turn is slow, as long
+  as the model stays loaded.
+- Models stay in the default `/var/lib/ollama`; phoenix has one disk with room.
+
+Check after the first rebuild: `journalctl -u ollama --no-pager -o cat | grep
+'inference compute' | tail -1` should name the Vulkan library, and `ollama ps`
+should show `100% GPU`. With only 512 MiB of VRAM, the GPU must use GTT memory
+(shared system RAM). If `ollama ps` shows a CPU/GPU split, that is the limit to
+look at.
