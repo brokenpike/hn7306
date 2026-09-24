@@ -1,6 +1,6 @@
 # Hermes Agent (Nous Research) as a native systemd service under its own
 # "hermes" user, state in /var/lib/hermes. It talks to the local Ollama server
-# (see hosts/hn7306/ollama.nix).
+# (see hosts/<name>/ollama.nix).
 #
 # Never put secrets in these options: they end up in the world-readable Nix
 # store. Messaging tokens belong in a file outside the store, referenced with

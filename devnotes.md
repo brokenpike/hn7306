@@ -496,3 +496,32 @@ amdgpu; the kernel patches themselves are gone on 7.2.
   `hardware.asus.battery.chargeUpto = 80` in hosts/hn7306/default.nix. Until
   that is rebuilt, set it by hand with `asusctl battery limit 80`.
 - Ollama still found the GPU after the reboot (`library=ROCm compute=gfx1151`).
+
+## Ollama, Hermes and OpenCode on phoenix (2026-09-24)
+
+phoenix (Framework 13, Ryzen 5 7640U, Radeon 760M, 38 GiB RAM, 512 MiB VRAM
+carve-out) runs its own Ollama for now, so both agents work offline and without
+hn7306. The plan is to point it at hn7306 later over a mesh network (nebula or
+Tailscale), with a Claude account as a further source of tokens. That will need
+a base URL option in llm.nix, since hermes.nix and home.nix hard-code
+`http://127.0.0.1:11434/v1`.
+
+- **Vulkan, not ROCm.** The 760M is gfx1103, which ROCm does not support without
+  `HSA_OVERRIDE_GFX_VERSION`. `pkgs.ollama-vulkan` runs on it as is and comes
+  from the cache.
+- **Model `gpt-oss:20b`** (about 14 GB). hn7306's `qwen3.6:35b` is about 23 GB
+  and would leave too little of the 38 GiB for the desktop. gpt-oss supports tool
+  calling, which Hermes needs.
+- **`OLLAMA_NUM_PARALLEL=1`** (hn7306 uses 2): each slot holds its own 64K
+  context, and RAM is short. Hermes and OpenCode queue instead of running at
+  once.
+- **`OLLAMA_IGPU_ENABLE=1`.** Without it, Vulkan finds the 760M but Ollama
+  logs `dropping integrated GPU; to enable, set OLLAMA_IGPU_ENABLE=1` and runs
+  `library=cpu`. That happened on the first rebuild.
+- Models stay in the default `/var/lib/ollama`; phoenix has one disk with room.
+
+Check after the first rebuild: `journalctl -u ollama --no-pager -o cat | grep
+'inference compute' | tail -1` should name the Vulkan library, and `ollama ps`
+should show `100% GPU`. With only 512 MiB of VRAM, the GPU must use GTT memory
+(shared system RAM). If `ollama ps` shows a CPU/GPU split, that is the limit to
+look at.

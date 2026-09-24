@@ -1,5 +1,5 @@
 # The local LLM that Ollama, Hermes and OpenCode share. Set the values once per
-# host (see hosts/hn7306/default.nix); ollama.nix, hermes.nix and home.nix read
+# host (in hosts/<name>/default.nix); ollama.nix, hermes.nix and home.nix read
 # them, so a model change is a one-line edit.
 { lib, ... }:
 

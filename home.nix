@@ -132,7 +132,7 @@ in
   };
 
   # OpenCode coding agent, using the local Ollama server (see
-  # hosts/hn7306/ollama.nix). It runs as scott with scott's permissions, unlike
+  # hosts/<name>/ollama.nix). It runs as scott with scott's permissions, unlike
   # Hermes, so it asks before editing files or running commands. The model and
   # context come from llm.nix; a host without a local model gets no OpenCode.
   programs.opencode = lib.mkIf (llm.model != null) {
