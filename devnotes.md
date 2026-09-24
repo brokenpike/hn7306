@@ -496,3 +496,67 @@ amdgpu; the kernel patches themselves are gone on 7.2.
   `hardware.asus.battery.chargeUpto = 80` in hosts/hn7306/default.nix. Until
   that is rebuilt, set it by hand with `asusctl battery limit 80`.
 - Ollama still found the GPU after the reboot (`library=ROCm compute=gfx1151`).
+
+## Hermes MCP connection to Visure: use `auth = "oauth"`, not a static Bearer header (2026-09-23)
+
+**What was staged and wrong.** An earlier edit to `hermes.nix` added
+`mcpServers.visure` pointed at the Visure Authoring 8 test server's MCP
+endpoint (`https://v5817.vegtamr.online/VisureAuthoring8/mcp`, see the Visure
+VM's own `DEVNOTES.md`/`VISURE-VM-SETUP-GUIDE.md`) using
+`headers.Authorization = "Bearer ${MCP_VISURE_API_KEY}"`, with the token meant
+to come from `/etc/hermes-secrets/visure-mcp.env`. This was never built or
+switched in (the change sat staged, uncommitted) and would not have worked:
+
+- The server's own doc comments (`VisureWeb.xml`,
+  `McpSessionBootstrap.ChooseAuthenticationMode`) say **"Bearer always wins
+  when present."** Any `Authorization: Bearer` header is treated as an OAuth
+  access token attempt; a static/arbitrary string there gets rejected, it
+  never falls through to the legacy header-auth path.
+- That legacy path (`Mcp.AllowHeaderAuth = true`) uses a *different* header
+  pair entirely — `X-Visure-Username` / `X-Visure-Token` — and
+  `McpUserSession.Token`'s doc comment says plainly: **for native auth, that
+  token is the account's actual plaintext password.** Not a scoped API key.
+  Wiring that up would have meant a real Visure account password sitting in
+  a `.env` file.
+
+**The fix:** Hermes has real OAuth 2.1 support (PKCE + dynamic client
+registration / RFC 7591, or CIMD when the server supports it — see
+`tools/mcp_oauth.py` in the hermes-agent source, and the `auth` option in the
+NixOS module's `mcpServerType` submodule, `nix/moduleCommon.nix`). This is
+the same mechanism Claude Desktop already uses successfully against this same
+Visure server (see the Visure VM's own DEVNOTES, 2026-09-16 entry). Changed
+`hermes.nix` to:
+
+```nix
+mcpServers.visure = {
+  url = "https://v5817.vegtamr.online/VisureAuthoring8/mcp";
+  auth = "oauth";
+};
+```
+
+No `headers`, no `environmentFiles`, no secret file at all — tokens are
+stored automatically in `$HERMES_HOME/mcp-tokens/` after a one-time
+authorization. Verified by building the `hermes-config.yaml` derivation
+directly (`nix-store --realize` on the `.drv` from a `--dry-run` build) and
+confirming the generated JSON: `"visure":{"auth":"oauth","enabled":true,"url":"https://..."}`
+with no headers/secrets present.
+
+**To actually authorize, after `sudo nixos-rebuild switch`:**
+
+    sudo -u hermes -H hermes mcp login visure
+
+This runs the interactive OAuth flow (browser PKCE by default; `--flow
+device` selects RFC 8628 device-code instead, for a fully headless box —
+not needed here since this machine has a GUI session). It prints a URL,
+you approve in a browser, and Hermes captures the token via a local
+callback listener.
+
+**General lesson for connecting any harness to any MCP server:** don't
+assume a `mcpServers.<name>.headers` field is the right knob just because it
+exists — check the *target* server's own auth precedence and what its
+fallback header scheme actually authenticates with (grep any shipped `.xml`
+XML-doc file or equivalent for the auth handler's doc comments) before
+wiring up a static secret. A server offering "header auth" as a legacy
+fallback does not imply that header takes an API key; here it took a
+password. Prefer whatever OAuth support the harness has, if the server
+offers OAuth at all.

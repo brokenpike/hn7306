@@ -42,5 +42,22 @@ in
       default = llm.model;
       context_length = llm.contextLength;
     };
+
+    # Real OAuth 2.1 (PKCE + dynamic client registration), not a static
+    # header. Confirmed 2026-09-23: the Visure server's auth precedence is
+    # "Authorization: Bearer always wins when present" over its legacy
+    # X-Visure-Username/X-Visure-Token header pair, so a static Bearer
+    # secret here would just be rejected as an invalid OAuth token, never
+    # falling through to header auth. Worse, that legacy header pair's
+    # "token" is literally the account's plaintext password for native
+    # (non-SSO) auth (VisureWeb.xml: McpUserSession.Token doc comment) — not
+    # a scoped API key — so it's the wrong direction to go even if it did
+    # work. `auth = "oauth"` uses the same DCR + PKCE flow Claude Desktop
+    # already uses successfully against this server; tokens are stored in
+    # $HERMES_HOME/mcp-tokens/, never in the Nix store or a secrets file.
+    mcpServers.visure = {
+      url = "https://v5817.vegtamr.online/VisureAuthoring8/mcp";
+      auth = "oauth";
+    };
   };
 }

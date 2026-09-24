@@ -47,4 +47,20 @@
       "noatime"
     ];
   };
+
+  # External USB drive: existing GGUF models (LM Studio layout, not Ollama's
+  # blob store) and VM disk images. nofail + automount so boot and rebuilds
+  # never block on it being plugged in.
+  fileSystems."/mnt/llms" = {
+    device = "/dev/disk/by-uuid/02abdfe8-34bd-4eba-80c8-a820d843c46c";
+    fsType = "btrfs";
+    options = [
+      "compress=zstd:3"
+      "noatime"
+      "nofail"
+      "x-systemd.automount"
+      "x-systemd.device-timeout=5"
+    ];
+  };
+  systemd.tmpfiles.rules = [ "d /mnt/llms 0775 scott users -" ];
 }
