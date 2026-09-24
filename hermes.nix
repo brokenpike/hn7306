@@ -5,7 +5,7 @@
 # Never put secrets in these options: they end up in the world-readable Nix
 # store. Messaging tokens belong in a file outside the store, referenced with
 # services.hermes-agent.environmentFiles.
-{ config, ... }:
+{ config, lib, ... }:
 
 let
   llm = config.local.llm;
@@ -32,15 +32,23 @@ in
     #   sudo -u hermes -H hermes chat
     addToSystemPackages = true;
 
-    settings.model = {
-      # A local OpenAI-compatible endpoint. Without this, Hermes searches its
-      # built-in providers (including Nous Portal) for its helper tasks.
-      provider = "custom";
-      base_url = "http://127.0.0.1:11434/v1";
-      # Both come from llm.nix and are set per host. Hermes cannot read the
-      # context from Ollama and would otherwise assume 256,000 tokens.
-      default = llm.model;
-      context_length = llm.contextLength;
+    settings = {
+      model = {
+        # A local OpenAI-compatible endpoint. Without this, Hermes searches its
+        # built-in providers (including Nous Portal) for its helper tasks.
+        provider = "custom";
+        base_url = "http://127.0.0.1:11434/v1";
+        # Both come from llm.nix and are set per host. Hermes cannot read the
+        # context from Ollama and would otherwise assume 256,000 tokens.
+        default = llm.model;
+        context_length = llm.contextLength;
+      };
+    }
+    # Hermes sends this to Ollama as reasoning_effort; unset, it asks for
+    # medium. The settings type does not resolve lib.mkIf, so it would end up
+    # in config.yaml literally.
+    // lib.optionalAttrs (llm.reasoningEffort != null) {
+      agent.reasoning_effort = llm.reasoningEffort;
     };
   };
 }

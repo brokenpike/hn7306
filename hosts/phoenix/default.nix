@@ -20,5 +20,9 @@
     # qwen3.6:35b would not leave enough. Supports tool calling, which Hermes
     # needs.
     model = "gpt-oss:20b";
+
+    # At medium it spent 477 tokens thinking about a haiku; at about 13
+    # tokens/s that is most of every agent step.
+    reasoningEffort = "low";
   };
 }

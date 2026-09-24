@@ -518,6 +518,24 @@ a base URL option in llm.nix, since hermes.nix and home.nix hard-code
 - **`OLLAMA_IGPU_ENABLE=1`.** Without it, Vulkan finds the 760M but Ollama
   logs `dropping integrated GPU; to enable, set OLLAMA_IGPU_ENABLE=1` and runs
   `library=cpu`. That happened on the first rebuild.
+- **Speed, measured with `ollama run --verbose`.** Generation is about 13
+  tokens/s, which is what the 760M's memory bandwidth allows. Prompt reading
+  was 240 tokens/s (12K tokens in 50 s). Agents send 10-20K token prompts, so
+  reading them is most of the wait.
+- **`local.llm.reasoningEffort = "low"`** (new option in llm.nix, read by
+  hermes.nix and home.nix). At its default of medium, gpt-oss spent 477 tokens
+  thinking about a haiku. Hermes sends it as `reasoning_effort` (its custom
+  provider asks for medium when unset); OpenCode gets it as a model option on
+  the default model only. Null on hn7306, so nothing changes there. Hermes'
+  `settings` type does not resolve `lib.mkIf`, so conditional keys there use
+  `lib.optionalAttrs`.
+- **Flash attention does not help here; removed.** With
+  `OLLAMA_FLASH_ATTENTION=1` (log confirmed `flash_attn = enabled` on Vulkan),
+  prompt reading was 236.6 tokens/s against 239.9 without it, and generation
+  was unchanged. Test with new text each run: Ollama caches the prompt, and a
+  repeated 12K-token prompt "reads" in 96 ms, which is meaningless as a
+  benchmark. The same cache is why only an agent's first turn is slow, as long
+  as the model stays loaded.
 - Models stay in the default `/var/lib/ollama`; phoenix has one disk with room.
 
 Check after the first rebuild: `journalctl -u ollama --no-pager -o cat | grep

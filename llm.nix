@@ -27,6 +27,23 @@
       '';
     };
 
+    reasoningEffort = lib.mkOption {
+      type = lib.types.nullOr (
+        lib.types.enum [
+          "low"
+          "medium"
+          "high"
+        ]
+      );
+      default = null;
+      example = "low";
+      description = ''
+        How long a reasoning model such as gpt-oss thinks before answering, in
+        both Hermes and OpenCode. Every agent step pays for it, so a slow GPU
+        wants "low". Applies to `model` only. Null keeps each tool's default.
+      '';
+    };
+
     extraModels = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = [ ];
