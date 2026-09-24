@@ -1,5 +1,5 @@
 {
-  description = "NixOS flake for ASUS HN7306 (Strix Halo) with Home Manager, on unstable";
+  description = "Shared NixOS configurations with Home Manager, on unstable";
 
   inputs = {
     determinate.url = "https://flakehub.com/f/DeterminateSystems/determinate/*";
@@ -33,17 +33,15 @@
       hermes-agent,
       ...
     }@inputs:
-    {
-      # Attribute name must match networking.hostName
-      nixosConfigurations = {
-        hn7306 = nixpkgs.lib.nixosSystem {
+    let
+      mkHost =
+        hostModule:
+        nixpkgs.lib.nixosSystem {
           specialArgs = { inherit inputs; };
           modules = [
             determinate.nixosModules.default
             hermes-agent.nixosModules.default
-            # Machine-specific settings (hostname, disks, hardware and GPU tuning)
-            ./hosts/hn7306
-            # Shared base configuration (imports the desktop and VM modules)
+            hostModule
             ./configuration.nix
             home-manager.nixosModules.home-manager
             {
@@ -56,6 +54,12 @@
             }
           ];
         };
+    in
+    {
+      # Attribute names must match each host's networking.hostName.
+      nixosConfigurations = {
+        hn7306 = mkHost ./hosts/hn7306;
+        amd7640u = mkHost ./hosts/amd7640u;
       };
     };
 }
