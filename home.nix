@@ -38,6 +38,7 @@ in
     obsidian
     tilix
     tmux
+    uv
     vscode
     wl-clipboard # helix system clipboard (space + y yanks to it)
     zeroad
