@@ -36,6 +36,8 @@ in
     microsoft-edge
     nix-output-monitor
     obsidian
+    proton-pass
+    protonmail-desktop # Proton Mail + Calendar
     tilix
     tmux
     uv
