@@ -1,9 +1,12 @@
-{ config, pkgs, ... }:
+{ pkgs, ... }:
 
 {
 
   # dconf backs virt-manager's saved settings
   programs.dconf.enable = true;
+
+  # Also makes virt-manager connect to qemu:///system on start
+  programs.virt-manager.enable = true;
 
   # Let the user manage VMs (libvirtd) and use hardware acceleration (kvm)
   users.users.scott.extraGroups = [
@@ -11,19 +14,16 @@
     "kvm"
   ];
 
-  # VM managers, guest tools and SPICE/Windows guest support
+  # VM managers, guest tools and SPICE/Windows guest support.
+  # guestfs-tools (virt-sparsify) is left out: it made every update heavy and is
+  # only needed now and then; run it with `nix shell nixpkgs#guestfs-tools`.
   environment.systemPackages = with pkgs; [
     adwaita-icon-theme
-    dnsmasq
     gnome-boxes
-    guestfs-tools
-    libguestfs
     phodav
     quickemu
     spice
     spice-gtk
-    spice-protocol
-    virt-manager
     virt-viewer
     virtio-win
     win-spice

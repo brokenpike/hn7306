@@ -412,6 +412,42 @@ previous generation in the boot menu, or `git checkout flake.lock`. A new kernel
 needs a reboot to apply, and can occasionally regress on this GPU. A switch
 restarts Hermes and Ollama, so update between tasks.
 
+## guestfs-tools run on demand, not installed (2026-09-28)
+
+`libguestfs` and `guestfs-tools` were in `vm.nix` and made every update heavy.
+They were only used for `virt-sparsify`, to shrink the Windows/MSSQL qcow2
+images every week or two (plus one `virt-filesystems`), so they were removed
+from the system. Removing only `libguestfs` would not have helped, because
+`guestfs-tools` depends on it. Nothing else in the config needs them. Run them
+when needed:
+
+    nix shell nixpkgs#guestfs-tools -c virt-sparsify in.qcow2 out.qcow2
+    nix shell nixpkgs#guestfs-tools -c virt-filesystems -a disk.qcow2 --all --long -h
+
+This uses the registry's nixpkgs (downloaded from the binary cache that day),
+not this flake's pin, so the tools can be a different version from the system's
+qemu. That is fine for working on image files offline. Do not sparsify the disk
+of a running VM.
+
+## vm.nix package cleanup (2026-09-28)
+
+Reviewed `vm.nix` after the guestfs change and trimmed the package list:
+
+- **`spice-protocol` removed.** It contains only C headers for building SPICE
+  software, so installing it system-wide did nothing.
+- **`dnsmasq` removed.** libvirt already puts its own dnsmasq on its PATH (the
+  libvirt package's `binPath`) for the VM network (192.168.122.0/24), so the
+  system copy only added an unused command. If the VM network loses DHCP or DNS
+  after this, this is the change to look at.
+- **`virt-manager` package line replaced by `programs.virt-manager.enable`.**
+  The module installs the same package and also sets a system dconf default so
+  virt-manager connects to `qemu:///system` on start. It is only a default, so
+  connections already saved in virt-manager are kept. Note that the Boxes VMs
+  (`win11-*`) live on `qemu:///session`, not `qemu:///system` (which has no VMs
+  yet), so to see them in virt-manager add a "QEMU/KVM User session" connection.
+  `programs.dconf.enable` stays, because the module adds a dconf database but
+  does not turn dconf on (GNOME does anyway, but niri would not).
+
 ## Internal speakers: nixos-hardware PX13 profile, pinned to an unmerged PR (2026-09-21)
 
 **Hardware.** DMI reports ASUS ProArt PX13 HN7306EAC. The internal speakers use
