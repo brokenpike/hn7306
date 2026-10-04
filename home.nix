@@ -41,6 +41,7 @@ in
     protonmail-desktop # Proton Mail + Calendar
     tilix
     tmux
+    trayscale # Tailscale tray app; needs --operator=scott (configuration.nix)
     uv
     vscode
     wl-clipboard # helix system clipboard (space + y yanks to it)

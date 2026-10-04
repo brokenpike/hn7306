@@ -36,6 +36,22 @@ ProtonVPN was not involved (no wg/proton interface, no active VPN connection).
 **Side effect worth knowing:** while the exit node is on, LAN traffic to
 192.168.50.0/24 also goes through it (same table 52 route).
 
+**Correction (2026-10-04).** The cause above blames subnets advertised by the
+exit node. On 2026-10-04 nixoshpe advertised only `0.0.0.0/0`, `::/0` and two
+RFC 5737 example ranges (`192.0.2.0/24`, `198.51.100.0/24`), and the problem
+was still there. The exit node's default route in table 52 is enough on its
+own: table 52 is consulted before the main table, so it catches `virbr0`'s
+subnet and the LAN as well. It hit plain LAN traffic too: SSH to
+nixoshpe's LAN address (192.168.50.74) timed out while it was the exit node.
+
+The "untested alternative" is now the fix, tested 2026-10-04: with
+`--exit-node-allow-lan-access`, `ip route get` for 192.168.50.74 and
+192.168.122.x goes out the LAN interface and `virbr0`. It is set in
+configuration.nix through `services.tailscale.extraSetFlags`, together with
+`--operator=scott` so scott and Trayscale (home.nix) can control Tailscale
+without sudo. nixoshpe's side (exit node declared in its config, example
+ranges dropped) is in its own repo, github.com/brokenpike/nix-hpe.
+
 ## Removed commented-out config (2026-09-20)
 
 The commented-out code was deleted to keep the files readable. It is still in

@@ -38,10 +38,13 @@
   networking.networkmanager.enable = true;
   services.tailscale = {
     enable = true;
-
-    # To use a preauthorized key, set:
-    # authKeyFile = "/run/secrets/tailscale_key";
-    # Note: maximum expiry is 90 days
+    # Applied at every start. Without the LAN bypass, an exit node takes the
+    # LAN and libvirt's VM subnet into the tunnel too (see devnotes.md). The
+    # operator lets scott, and Trayscale, control Tailscale without sudo.
+    extraSetFlags = [
+      "--exit-node-allow-lan-access"
+      "--operator=scott"
+    ];
   };
   services.openssh.enable = true;
 
