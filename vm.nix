@@ -17,11 +17,13 @@
   # VM managers, guest tools and SPICE/Windows guest support.
   # guestfs-tools (virt-sparsify) is left out: it made every update heavy and is
   # only needed now and then; run it with `nix shell nixpkgs#guestfs-tools`.
+  # socat talks to a running quickemu VM's QEMU monitor socket.
   environment.systemPackages = with pkgs; [
     adwaita-icon-theme
     gnome-boxes
     phodav
     quickemu
+    socat
     spice
     spice-gtk
     virt-viewer
@@ -40,5 +42,10 @@
     spiceUSBRedirection.enable = true;
   };
   services.spice-vdagentd.enable = true;
+
+  # Windows guests can crash on model-specific registers KVM doesn't emulate,
+  # and quickemu warns at every start until KVM ignores them. quickemu's own
+  # --ignore-msrs-always writes under /etc, which NixOS doesn't keep.
+  boot.extraModprobeConfig = "options kvm ignore_msrs=1 report_ignored_msrs=0";
 
 }

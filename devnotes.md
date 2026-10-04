@@ -643,3 +643,25 @@ Check after the first rebuild: `journalctl -u ollama --no-pager -o cat | grep
 should show `100% GPU`. With only 512 MiB of VRAM, the GPU must use GTT memory
 (shared system RAM). If `ollama ps` shows a CPU/GPU split, that is the limit to
 look at.
+
+## Visure VMs moved to quickemu; gh, socat, KVM MSRs (2026-10-02)
+
+- **Visure VMs run in quickemu now, not GNOME Boxes.** Each VM is one folder
+  plus a `.conf` in `/scratch/visure-clones` (disk, UEFI vars, TPM state,
+  logs), started with `quickemu --vm <name>.conf`. The Boxes VM `win11-6` was
+  reflink-copied to `visure8405817`; its Boxes definition stays as a fallback.
+  libvirt and Boxes stay installed for the older VMs. The image and clone
+  scripts live in `~/vms/visure-golden` (github.com/vegtamr-no/visure-golden).
+- quickemu's default networking is QEMU user-mode NAT, so these VMs don't use
+  `virbr0` and the Tailscale exit-node problem above doesn't apply to them.
+  SSH goes through a fixed port forward per VM (`ssh_port=` in the conf, plus a
+  `Host` alias in `~/.ssh/config`).
+- **`boot.extraModprobeConfig = "options kvm ignore_msrs=1 ..."`** in vm.nix.
+  quickemu warns at every start that Windows guests may crash on unhandled
+  MSRs. Its `--ignore-msrs-always` writes `/etc/modprobe.d`, which NixOS
+  doesn't keep, so the option is set here. `report_ignored_msrs=0` keeps the
+  ignored accesses out of the kernel log. Takes effect after a reboot (or
+  reloading `kvm`).
+- **`socat`** (vm.nix) to talk to a running VM's QEMU monitor socket, for
+  example to add a port forward without restarting it. **`gh`** (home.nix) for
+  creating GitHub repos; it was run through `nix-shell -p gh` before.

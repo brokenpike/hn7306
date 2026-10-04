@@ -13,8 +13,10 @@ it is an application; every file is Nix (or docs).
 - OS: NixOS unstable (26.11 pre-release), flakes, Home Manager as a NixOS
   module, Determinate Nix. GNOME desktop on GDM.
 - What runs on it: Ollama on the ROCm build (local LLM server), Hermes Agent
-  (a persistent assistant, native systemd service), libvirt and GNOME Boxes
-  (a 24 GiB Windows VM used for Visure testing), Tailscale, zram swap.
+  (a persistent assistant, native systemd service), Windows VMs for Visure
+  testing (quickemu, one folder per VM under `/scratch/visure-clones`, about
+  16 GiB each; libvirt and GNOME Boxes are still installed), Tailscale, zram
+  swap.
 - The user may add a second computer later and the niri window manager, and
   wants to try the nebula mesh VPN.
 
@@ -24,7 +26,7 @@ it is an application; every file is Nix (or docs).
 flake.nix                  inputs and wiring only
 configuration.nix          shared base for every host, grouped by topic
 gnome.nix                  GNOME session (GDM stays in configuration.nix)
-vm.nix                     libvirt, Boxes, SPICE, Windows guest tools
+vm.nix                     quickemu, libvirt, Boxes, SPICE, Windows guest tools, KVM MSRs
 llm.nix                    options local.llm.*: the one model Ollama, Hermes and OpenCode share
 hermes.nix                 Hermes Agent service (optional module)
 home.nix                   Home Manager config for scott (includes OpenCode)
@@ -103,12 +105,13 @@ nix eval --json .#nixosConfigurations.hn7306.config.<option>
   `journalctl -u ollama --no-pager -o cat | grep 'inference compute' | tail -1`
   says `library=ROCm`, and that `ollama ps` shows `100% GPU`.
 - A Tailscale exit node routes the VM subnet (192.168.122.0/24) into the
-  tunnel, which breaks the Windows VM's internet. Keep that in mind for any
-  networking or nebula work; nebula's overlay subnet must not overlap
-  192.168.50.0/24 (LAN), 192.168.122.0/24 (libvirt) or 100.64.0.0/10
-  (Tailscale).
+  tunnel, which breaks the internet of VMs on libvirt's bridge (`virbr0`).
+  quickemu's default NAT (user-mode networking) connects from the host itself,
+  so it isn't affected. Keep that in mind for any networking or nebula work;
+  nebula's overlay subnet must not overlap 192.168.50.0/24 (LAN),
+  192.168.122.0/24 (libvirt) or 100.64.0.0/10 (Tailscale).
 - GPU-addressable memory is capped at 80 GiB (`ttm.pages_limit=20971520` in
-  `strix-halo.nix`). The cap is a ceiling, not a reservation; the 24 GiB VM and
+  `strix-halo.nix`). The cap is a ceiling, not a reservation; the VMs and
   the model share the same 124 GiB.
 - `services.ollama.models` was renamed `modelsDir`. Root has little free
   space, so model files live on `/scratch`.

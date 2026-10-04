@@ -24,6 +24,7 @@ in
     direnv
     evince
     fish
+    gh
     git-credential-manager
     gnomeExtensions.tiling-shell # GNOME only
     grc
