@@ -22,8 +22,9 @@
     systemd-boot = {
       enable = true;
       # Every generation keeps a kernel and initrd on the small (446 MB) boot
-      # partition. Unlimited entries would eventually make a rebuild fail there.
-      configurationLimit = 10;
+      # partition, about 78 MB per pair (the initrd alone is 64 MB). 10 filled
+      # it on 2026-10-02 once generations stopped sharing initrds; 5 fits.
+      configurationLimit = 5;
     };
     efi.canTouchEfiVariables = true;
   };
