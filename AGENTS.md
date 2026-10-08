@@ -110,9 +110,10 @@ nix eval --json .#nixosConfigurations.hn7306.config.<option>
   so it isn't affected. Keep that in mind for any networking or nebula work;
   nebula's overlay subnet must not overlap 192.168.50.0/24 (LAN),
   192.168.122.0/24 (libvirt) or 100.64.0.0/10 (Tailscale).
-- GPU-addressable memory is capped at 80 GiB (`ttm.pages_limit=20971520` in
-  `strix-halo.nix`). The cap is a ceiling, not a reservation; the VMs and
-  the model share the same 124 GiB.
+- GPU-addressable memory is capped at 104 GiB (`ttm.pages_limit=27262976` in
+  `strix-halo.nix`, raised from 80 GiB on 2026-10-06 for DeepSeek V4 Flash).
+  The cap is a ceiling, not a reservation; the VMs and the model share the
+  same 124 GiB, so a model above about 60 GiB and a VM must not run together.
 - `services.ollama.models` was renamed `modelsDir`. Root has little free
   space, so model files live on `/scratch`.
 

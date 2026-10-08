@@ -6,10 +6,11 @@
     kernelPackages = pkgs.linuxPackages_latest;
     kernelParams = [
       "amd_iommu=off"
-      # GPU-addressable memory cap: 80 GiB, in 4 KiB pages (80 * 262144).
-      # Leaves room for a 24 GiB VM and the host. amdgpu.gttsize is deprecated
-      # and ttm.pages_limit is the effective limit.
-      "ttm.pages_limit=20971520"
+      # GPU-addressable memory cap: 104 GiB, in 4 KiB pages (104 * 262144).
+      # Fits DeepSeek V4 Flash at 2-bit (85 GiB plus context) and leaves about
+      # 20 GiB for the host, so a big model and a VM must not run together.
+      # amdgpu.gttsize is deprecated; ttm.pages_limit is the effective limit.
+      "ttm.pages_limit=27262976"
     ];
   };
 

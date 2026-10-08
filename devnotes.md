@@ -681,3 +681,34 @@ look at.
 - **`socat`** (vm.nix) to talk to a running VM's QEMU monitor socket, for
   example to add a port forward without restarting it. **`gh`** (home.nix) for
   creating GitHub repos; it was run through `nix-shell -p gh` before.
+
+## GPU memory cap raised to 104 GiB for DeepSeek V4 Flash (2026-10-06)
+
+Supersedes the 80 GiB decision in "GPU memory plan and zram swap".
+
+**Why:** to try DeepSeek V4 Flash 0731 (304B-parameter MoE) from
+`unsloth/DeepSeek-V4-Flash-0731-GGUF`. Its 2-bit quants are about 85 GiB
+(`UD-IQ2_XXS` 84.6, `UD-IQ2_M` 84.7 GiB), plus context and compute buffers:
+roughly 90-95 GiB, which the 80 GiB cap could not hold. Framework's guide runs
+it on the 128 GB Framework Desktop (same Ryzen AI Max+ 395); the difference was
+only this cap, not the hardware. The 1-bit quants (`UD-IQ1_S` 76.9,
+`UD-IQ1_M` 80.9 GiB) would not have fitted 80 GiB with any useful context
+either, and lose much more quality.
+
+**Now:** `ttm.pages_limit=27262976` (104 GiB). It leaves about 20 GiB for the
+host. The user's decision: **a big model and a Windows VM do not run at the
+same time.** `qwen3.6:35b` (22 GB) and a 16 GiB quickemu VM together still fit
+easily. Check after the reboot: `mem_info_gtt_total` should read 106496 MiB.
+
+**Compared on published scores (full precision):** Framework's suggestion for
+its 64 GB model, Qwen3.5-122B-A10B, is not better than the `qwen3.6:35b`
+already in use (SWE-bench Verified 72.0 vs 73.4, LiveCodeBench 78.9 vs 80.4,
+Terminal-Bench 2.0 49.4 vs 51.5; ahead only on knowledge, MMLU-Pro 86.7 vs
+85.2), and it would be about 3x slower (10B vs 3B active). DeepSeek V4 Flash
+reports Terminal-Bench 2.1 at 82.7: a different test version, but a clearly
+higher class. No scores exist for its 2-bit quants, so whether it beats
+`qwen3.6:35b` here has to be tried.
+
+**Runtime still open:** llama.cpp loads the three split GGUF files directly;
+whether Ollama 0.34.4 supports the `deepseek_v4` architecture is unconfirmed,
+and Ollama would need the parts merged into one file first.
