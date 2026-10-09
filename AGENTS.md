@@ -12,13 +12,14 @@ it is an application; every file is Nix (or docs).
   124 GiB unified memory. Hostname `hn7306`, single user `scott`.
 - OS: NixOS unstable (26.11 pre-release), flakes, Home Manager as a NixOS
   module, Determinate Nix. GNOME desktop on GDM.
-- What runs on it: Ollama on the ROCm build (local LLM server), Hermes Agent
-  (a persistent assistant, native systemd service), Windows VMs for Visure
-  testing (quickemu, one folder per VM under `/scratch/visure-clones`, about
-  16 GiB each; libvirt and GNOME Boxes are still installed), Tailscale, zram
-  swap.
-- The user may add a second computer later and the niri window manager, and
-  wants to try the nebula mesh VPN.
+- What runs on it: llama.cpp behind llama-swap (local LLM server; Ollama kept
+  only as a benchmark reference), Hermes Agent (a persistent assistant, native
+  systemd service), Windows VMs for Visure testing (quickemu, one folder per VM
+  under `/scratch/visure-clones`, about 16 GiB each; libvirt and GNOME Boxes are
+  still installed), Tailscale, zram swap.
+- A second host, `phoenix` (Framework 13 laptop), runs its own Ollama with
+  `gpt-oss:20b`. The user may add the niri window manager, and wants to try
+  the nebula mesh VPN.
 
 ## Layout
 
@@ -27,14 +28,14 @@ flake.nix                  inputs and wiring only
 configuration.nix          shared base for every host, grouped by topic
 gnome.nix                  GNOME session (GDM stays in configuration.nix)
 vm.nix                     quickemu, libvirt, Boxes, SPICE, Windows guest tools, KVM MSRs
-llm.nix                    options local.llm.*: the one model Ollama, Hermes and OpenCode share
+llm.nix                    options local.llm.*: server URL, models and context for Hermes and OpenCode
 hermes.nix                 Hermes Agent service (optional module)
 home.nix                   Home Manager config for scott (includes OpenCode)
 hosts/hn7306/default.nix   hostname, /scratch mount, imports the files below
 hosts/hn7306/hardware-configuration.nix   GENERATED, never edit
 hosts/hn7306/strix-halo.nix   GPU memory cap, ROCm, asusd, lact, fwupd
-hosts/hn7306/ollama.nix    Ollama service, models stored in /scratch/ollama
-hosts/hn7306/llama-swap.nix   llama.cpp via llama-swap on :8080, GGUFs in /scratch/models (migration in progress)
+hosts/hn7306/ollama.nix    Ollama (benchmark reference only), models in /scratch/ollama
+hosts/hn7306/llama-swap.nix   llama.cpp via llama-swap on :8080, GGUFs in /scratch/models
 devnotes.md                decision log: what was decided and why
 ```
 
@@ -56,22 +57,29 @@ devnotes.md                decision log: what was decided and why
 - Commit messages: lowercase, imperative summary line, then a body that says
   why. Do not commit or push unless asked.
 
-## One model, set in one place
+## LLM settings, set in one place
 
-Hermes and OpenCode share one Ollama server, one model and one context size.
-They are set once, per host, in `hosts/hn7306/default.nix` under `local.llm`
-(`model`, `contextLength`, `extraModels`; options defined in `llm.nix`).
-`ollama.nix`, `hermes.nix` and `home.nix` all read them. To change the model,
-edit `local.llm.model` there; never hard-code a model name or context size in
-the other files.
+Hermes and OpenCode share one server, one context size and, by default, one
+model. They are set once per host in `hosts/<name>/default.nix` under
+`local.llm` (`baseURL`, `model`, `opencode.model`, `contextLength`,
+`extraModels`; options defined in `llm.nix`). `hermes.nix`, `home.nix` and the
+host's server module (`llama-swap.nix` or `ollama.nix`) read them. Never
+hard-code a URL, model name or context size in the other files.
 
-- Both tools must use the same model. Different names make Ollama unload and
-  reload the model on every switch (`OLLAMA_MAX_LOADED_MODELS=1`).
+- On hn7306 the names are llama-swap model IDs (`qwen3.6-35b`), defined in
+  `llama-swap.nix`; on phoenix they are Ollama tags (`gpt-oss:20b`).
+- `opencode.model` gives OpenCode its own model. Only use it for models the
+  server keeps loaded together (a llama-swap group with `swap = false`).
+  Otherwise every switch between the tools reloads a model.
+- `contextLength` is per request. llama-server splits `--ctx-size` across
+  slots, so `llama-swap.nix` multiplies it by the slot count.
 - Hermes refuses any model with a context below 64,000 tokens; an assertion in
   `hermes.nix` enforces it.
 - OpenCode only offers models declared in its config. `extraModels` lists the
-  other installed models it may switch to.
-- The user must `ollama pull <model>` first; nothing downloads automatically.
+  other models it may switch to.
+- Nothing downloads automatically. On hn7306 the user downloads GGUFs into
+  `/scratch/models` with `hf download` and adds an entry to `llama-swap.nix`;
+  on phoenix, `ollama pull <model>`.
 
 ## Verify changes (safe, read-only)
 
@@ -104,7 +112,9 @@ nix eval --json .#nixosConfigurations.hn7306.config.<option>
 - Ollama silently fell back to CPU after a rebuild. After any change that
   restarts Ollama, the user should confirm
   `journalctl -u ollama --no-pager -o cat | grep 'inference compute' | tail -1`
-  says `library=ROCm`, and that `ollama ps` shows `100% GPU`.
+  says `library=ROCm`, and that `ollama ps` shows `100% GPU`. For llama-swap,
+  `journalctl -u llama-swap --no-pager -o cat | grep -E 'ggml_vulkan|offloaded'`
+  should name the Radeon 8060S and offload all layers.
 - A Tailscale exit node routes the VM subnet (192.168.122.0/24) into the
   tunnel, which breaks the internet of VMs on libvirt's bridge (`virbr0`).
   quickemu's default NAT (user-mode networking) connects from the host itself,
@@ -115,6 +125,9 @@ nix eval --json .#nixosConfigurations.hn7306.config.<option>
   `strix-halo.nix`, raised from 80 GiB on 2026-10-06 for DeepSeek V4 Flash).
   The cap is a ceiling, not a reservation; the VMs and the model share the
   same 124 GiB, so a model above about 60 GiB and a VM must not run together.
+  The llama-swap Qwen pair (about 65 GiB with context) plus one 16 GiB VM is
+  the planned maximum; check the totals before adding models or slots to that
+  group. DeepSeek (85 GiB) never runs next to a VM.
 - `services.ollama.models` was renamed `modelsDir`. Root has little free
   space, so model files live on `/scratch`.
 

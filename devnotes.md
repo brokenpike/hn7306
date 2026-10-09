@@ -788,3 +788,44 @@ pipeline deadlock on the Nix eval cache):
         | curl -s localhost:11434/api/generate -d @- \
         | $JQ '{pp:(.prompt_eval_count/(.prompt_eval_duration/1e9)), tg:(.eval_count/(.eval_duration/1e9))}'
     end
+
+## Hermes and OpenCode moved to llama-swap; per-tool model option (2026-10-09)
+
+Step 2 of the llama.cpp migration. `llm.nix` gained two options:
+
+- **`local.llm.baseURL`**, read by hermes.nix and home.nix instead of the
+  hard-coded `127.0.0.1:11434/v1` (the phoenix entry above asked for this).
+  The default stays Ollama's address, so phoenix is unchanged; hn7306 sets
+  `http://127.0.0.1:8080/v1`. Pointing phoenix at hn7306 over the tailnet is
+  now only this one setting.
+- **`local.llm.opencode.model`**: OpenCode's own model, null = Hermes' model.
+  The old rule "both tools must use one model" came from Ollama's
+  `OLLAMA_MAX_LOADED_MODELS=1`. A llama-swap group with `swap = false` keeps
+  two models loaded, so two models are now possible, but only within such a
+  group. Left null on hn7306 for now, so behaviour does not change during the
+  switch of backend; the candidate is `qwen3-coder-30b`.
+
+Model names on hn7306 are now llama-swap IDs (`qwen3.6-35b`). OpenCode's
+provider was renamed from `ollama` to `local` (`local/qwen3.6-35b`), since the
+server is no longer Ollama. `extraModels` dropped the Ollama-only models
+(gemma4, gpt-oss, the old qwen3-coder tag) and lists the llama-swap ones.
+Ollama keeps running for now; making it start on demand only is step 4.
+
+**Two models, plus Visure (same day):** OpenCode now uses `qwen3-coder-30b`
+(`local.llm.opencode.model`), Hermes keeps `qwen3.6-35b`. Visure, if it can
+use an OpenAI-compatible endpoint, reaches the same Qwen3.6 from the Windows
+VM at `http://10.0.2.2:8080/v1`: quickemu's user-mode network forwards
+10.0.2.2 to the host's 127.0.0.1, so llama-swap needs no change.
+
+Trying DeepSeek in Hermes first showed why one group matters: Hermes on
+DeepSeek and OpenCode on Qwen swapped the 85 GiB and 37 GiB models on every
+switch between the tools (the first Hermes request took 2.5 minutes, mostly
+loading). They do not fit together under the 104 GiB cap, and DeepSeek does
+not fit next to a VM, so it stays a deliberate session choice for both tools.
+
+To fit the Qwen pair next to the 16 GiB Visure VM, Coder changed to
+`UD-Q4_K_XL` (17.6 GB; Q8_0 file kept) and one slot (OpenCode is its only
+user; a second 64K slot is about 6 GiB of KV cache in f16). Measured: Qwen3.6
+Q8 with 2 x 64K slots uses 40.9 GiB of GTT. Estimated pair: about 65 GiB, so
+pair plus VM leaves about 43 GiB for the host. Coder Q8 with two slots would
+have left about 24 GiB.

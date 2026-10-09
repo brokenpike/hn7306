@@ -22,21 +22,23 @@
   # suspend, and defaults to 100%, which overrode asusd's 80%. Keep both at 80.
   hardware.asus.battery.chargeUpto = 80;
 
-  # The one model Ollama, Hermes and OpenCode share. Change it here, then pull
-  # it with `ollama pull <name>` and rebuild.
+  # What Hermes and OpenCode use. The names are llama-swap model IDs, defined
+  # in llama-swap.nix; Ollama stays installed only as a benchmark reference.
   local.llm = {
-    # A general-purpose MoE model (about 3B active) that is also strong at
-    # agentic coding.
-    model = "qwen3.6:35b";
+    baseURL = "http://127.0.0.1:8080/v1";
 
-    # Other installed models OpenCode can be switched to. Switching loads the
-    # other model, so avoid mixing models between the two tools.
-    extraModels = [
-      "gemma4:31b"
-      "gpt-oss:120b"
-      "gpt-oss:20b"
-      "qwen3-coder:30b"
-    ];
+    # Hermes (and Visure, from the VM at http://10.0.2.2:8080/v1): a
+    # general-purpose MoE model (about 3B active) that is also strong at
+    # agentic coding.
+    model = "qwen3.6-35b";
+
+    # OpenCode. Shares a llama-swap group with qwen3.6-35b, so both stay
+    # loaded and switching between the tools reloads nothing.
+    opencode.model = "qwen3-coder-30b";
+
+    # Other llama-swap models OpenCode can be switched to. deepseek-v4-flash
+    # unloads both Qwen models and does not fit next to a VM.
+    extraModels = [ "deepseek-v4-flash" ];
   };
 
   # Btrfs data disk

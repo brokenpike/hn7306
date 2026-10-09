@@ -8,6 +8,14 @@
 
 let
   llm = osConfig.local.llm;
+  opencodeModel = if llm.opencode.model != null then llm.opencode.model else llm.model;
+  opencodeModels = lib.unique (
+    [
+      llm.model
+      opencodeModel
+    ]
+    ++ llm.extraModels
+  );
 in
 {
   home.username = "scott";
@@ -136,31 +144,30 @@ in
     };
   };
 
-  # OpenCode coding agent, using the local Ollama server (see
-  # hosts/<name>/ollama.nix). It runs as scott with scott's permissions, unlike
-  # Hermes, so it asks before editing files or running commands. The model and
-  # context come from llm.nix; a host without a local model gets no OpenCode.
+  # OpenCode coding agent, using the local LLM server set in llm.nix. It runs
+  # as scott with scott's permissions, unlike Hermes, so it asks before editing
+  # files or running commands. Server, model and context come from llm.nix; a
+  # host without a local model gets no OpenCode.
   programs.opencode = lib.mkIf (llm.model != null) {
     enable = true;
     settings = {
       "$schema" = "https://opencode.ai/config.json";
 
-      # Hermes uses the same model on the same server. Different names would
-      # make Ollama unload and reload the model on every switch, so both read
-      # local.llm.model. It also serves the small helper tasks.
-      model = "ollama/${llm.model}";
-      small_model = "ollama/${llm.model}";
+      # Hermes' model unless local.llm.opencode.model is set; see llm.nix for
+      # when two models make sense. It also serves the small helper tasks.
+      model = "local/${opencodeModel}";
+      small_model = "local/${opencodeModel}";
 
       autoupdate = false; # the version comes from nixpkgs
       share = "disabled"; # never upload sessions to opencode.ai
 
-      provider.ollama = {
+      provider.local = {
         npm = "@ai-sdk/openai-compatible";
-        name = "Ollama (local)";
-        options.baseURL = "http://127.0.0.1:11434/v1";
-        # OpenCode only offers the models declared here. The context equals the
-        # server's OLLAMA_CONTEXT_LENGTH, so it matches Hermes.
-        models = lib.genAttrs (lib.unique ([ llm.model ] ++ llm.extraModels)) (
+        name = "Local";
+        options.baseURL = llm.baseURL;
+        # OpenCode only offers the models declared here. The context equals
+        # what the server gives each slot, so it matches Hermes.
+        models = lib.genAttrs opencodeModels (
           m:
           {
             name = "${m} (local)";

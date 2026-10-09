@@ -61,11 +61,14 @@ in
           ttl = 1800;
         };
 
+        # OpenCode's model (local.llm.opencode.model). Q4 and one slot keep the
+        # Qwen pair near 65 GiB, so the 16 GiB Visure VM fits next to it. One
+        # slot because OpenCode is its only user; the Q8_0 file is kept too.
         "qwen3-coder-30b" = {
           cmd = server vulkan [
-            "--model ${models}/qwen3-coder-30b-a3b/Qwen3-Coder-30B-A3B-Instruct-Q8_0.gguf"
-            "--ctx-size ${toString (config.local.llm.contextLength * slots)}"
-            "--parallel ${toString slots}"
+            "--model ${models}/qwen3-coder-30b-a3b/Qwen3-Coder-30B-A3B-Instruct-UD-Q4_K_XL.gguf"
+            "--ctx-size ${toString config.local.llm.contextLength}"
+            "--parallel 1"
             # Same sampling as Ollama's qwen3-coder:30b.
             "--temp 0.7"
             "--top-k 20"
@@ -86,9 +89,9 @@ in
         };
       };
 
-      # The two Qwen models stay loaded together (about 70 GiB plus context).
+      # The two Qwen models stay loaded together (about 65 GiB with context).
       # Exclusive: loading either unloads DeepSeek, and loading DeepSeek, which
-      # is in the default group, unloads both. No VM while the pair is loaded.
+      # is in the default group, unloads both. No VM while DeepSeek is loaded.
       groups.qwen = {
         swap = false;
         exclusive = true;

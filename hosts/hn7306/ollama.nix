@@ -1,4 +1,5 @@
-# Local LLM server: Ollama on the ROCm build. Hermes (hermes.nix) talks to it.
+# Ollama on the ROCm build. No longer what Hermes and OpenCode use (that is
+# llama-swap.nix); kept as a reference to benchmark llama.cpp against.
 { config, pkgs, ... }:
 
 {

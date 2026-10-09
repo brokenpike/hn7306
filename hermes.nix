@@ -1,6 +1,6 @@
 # Hermes Agent (Nous Research) as a native systemd service under its own
-# "hermes" user, state in /var/lib/hermes. It talks to the local Ollama server
-# (see hosts/<name>/ollama.nix).
+# "hermes" user, state in /var/lib/hermes. It talks to the local LLM server set
+# in local.llm.baseURL (llm.nix).
 #
 # Never put secrets in these options: they end up in the world-readable Nix
 # store. Messaging tokens belong in a file outside the store, referenced with
@@ -37,14 +37,15 @@ in
         # A local OpenAI-compatible endpoint. Without this, Hermes searches its
         # built-in providers (including Nous Portal) for its helper tasks.
         provider = "custom";
-        base_url = "http://127.0.0.1:11434/v1";
-        # Both come from llm.nix and are set per host. Hermes cannot read the
-        # context from Ollama and would otherwise assume 256,000 tokens.
+        base_url = llm.baseURL;
+        # All three come from llm.nix and are set per host. Hermes cannot read
+        # the context from the server and would otherwise assume 256,000
+        # tokens.
         default = llm.model;
         context_length = llm.contextLength;
       };
     }
-    # Hermes sends this to Ollama as reasoning_effort; unset, it asks for
+    # Hermes sends this to the server as reasoning_effort; unset, it asks for
     # medium. The settings type does not resolve lib.mkIf, so it would end up
     # in config.yaml literally.
     // lib.optionalAttrs (llm.reasoningEffort != null) {
