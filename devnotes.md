@@ -712,3 +712,79 @@ higher class. No scores exist for its 2-bit quants, so whether it beats
 **Runtime still open:** llama.cpp loads the three split GGUF files directly;
 whether Ollama 0.34.4 supports the `deepseek_v4` architecture is unconfirmed,
 and Ollama would need the parts merged into one file first.
+
+## llama.cpp behind llama-swap, next to Ollama (2026-10-09)
+
+**Plan:** move the daily backend to llama.cpp with llama-swap; keep Ollama,
+started only on demand, as a reference for benchmarks and for catching poor
+llama.cpp settings. The single-model rule may become two models (Hermes on
+Qwen3.6, OpenCode on Qwen3-Coder). Restore point: tag `backup/pre-llama-swap`.
+
+**Step 1 (this entry):** `hosts/hn7306/llama-swap.nix` serves
+`127.0.0.1:8080`. Nothing points at it yet; Ollama, Hermes and OpenCode are
+unchanged.
+
+- Models in `/scratch/models`, IDs `qwen3.6-35b` (UD-Q8_K_XL + mmproj-F16),
+  `qwen3-coder-30b` (Q8_0) and `deepseek-v4-flash` (UD-IQ2_M, 3 parts).
+  Q8 for the 3B-active MoE models: speed hardly depends on the quant, and
+  memory is plentiful. Plain Q8_0 is preferred for new downloads, because
+  Unsloth's UD-Q8_K_XL keeps some tensors in BF16, which is weakly supported on
+  gfx1151 under Vulkan; the UD file already downloaded stays until a benchmark
+  says otherwise.
+- Group `qwen` keeps both Qwen models loaded together (about 70 GiB plus
+  context, so no VM meanwhile) and is exclusive with DeepSeek (85 GiB).
+  `ttl = 1800` unloads idle models after 30 minutes, like Ollama but longer.
+- llama-server splits `--ctx-size` across `--parallel` slots, so it gets
+  `local.llm.contextLength * 2`; each slot keeps the 65,536 Hermes requires.
+- Sampling flags copy Ollama's model defaults, so comparisons are fair.
+- Vulkan build first. `nixpkgs.config.rocmSupport = true` would add ROCm to
+  every llama-cpp build, so the override turns it off. Compare with
+  `pkgs.llama-cpp-rocm` using llama-bench before settling. Both are cached.
+- llama.cpp 0.6.0 (upstream switched to semver tags) knows `qwen35moe`,
+  `qwen3moe` and `deepseek4`, the architectures in these GGUF files.
+- The module runs llama-swap as a DynamicUser. `/dev/kfd` and
+  `/dev/dri/renderD128` are mode 0666, so no extra groups are needed, and the
+  model files are world-readable.
+
+**Benchmark, ROCm vs Vulkan (2026-10-09):** llama-bench, Qwen3.6-35B-A3B
+UD-Q8_K_XL, `-ngl 999 -fa 1 -p 2048 -n 128 -d 0,32768`, llama.cpp 0.6.0
+(d812350), Mesa 26.2.4, ROCm 7.2.3. Tokens per second:
+
+    test               Vulkan   ROCm
+    pp2048               1239   1104
+    tg128                45.7   42.5
+    pp2048 @ d32768       671    688
+    tg128 @ d32768       39.4   37.1
+
+Vulkan wins three of four; ROCm's 2.5% at 32K is within noise. **Decision:
+stay on Vulkan.** RADV reports `bf16: 0` and `KHR_coopmat` (matrix cores in
+use). The UD-Q8_K_XL file benchmarks as plain Q8_0, so its few BF16 tensors do
+not matter. The nixpkgs ROCm build has no rocWMMA flash-attention kernels;
+revisit ROCm only if that changes. Qwen3-Coder (qwen3moe) not yet measured.
+
+**Benchmark, Ollama vs llama.cpp, same file (2026-10-09):** both loaded
+`Qwen3.6-35B-A3B-UD-Q4_K_XL.gguf` (imported into Ollama as
+`qwen3.6-q4-bench`). Ollama numbers from `/api/generate` (2,015-token prompt,
+128 generated, `num_ctx` 8192, mean of 3 runs); llama.cpp from llama-bench
+(`-p 2048 -n 128 -fa 1`, Vulkan). Tokens per second:
+
+    test        Ollama (ROCm)   llama.cpp (Vulkan)
+    prompt          ~1300         1376 ± 75
+    generate         44.1          59.0
+
+Prompt processing is equal within noise; generation is 34% faster in
+llama.cpp. API overhead is negligible (llama-swap served Q8 at 45.5 vs
+llama-bench 45.7), so the methods compare. Net effect: llama.cpp runs Q8 at
+Ollama's Q4 speed (45.7 vs 44.1). Keep Q8 for the agents. Rerun this check
+after updating either package; keep `qwen3.6-q4-bench` in Ollama for it.
+
+To repeat the Ollama side (fish; fetch jq once, two `nix run` calls in one
+pipeline deadlock on the Nix eval cache):
+
+    set JQ (nix build --no-link --print-out-paths nixpkgs#jq.bin)/bin/jq
+    for i in 1 2 3
+        $JQ -n --arg p (random)" "(string repeat -n 200 "The quick brown fox jumps over the lazy dog. ") \
+            '{model:"qwen3.6-q4-bench",prompt:$p,stream:false,options:{num_ctx:8192,num_predict:128}}' \
+        | curl -s localhost:11434/api/generate -d @- \
+        | $JQ '{pp:(.prompt_eval_count/(.prompt_eval_duration/1e9)), tg:(.eval_count/(.eval_duration/1e9))}'
+    end

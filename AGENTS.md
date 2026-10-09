@@ -34,6 +34,7 @@ hosts/hn7306/default.nix   hostname, /scratch mount, imports the files below
 hosts/hn7306/hardware-configuration.nix   GENERATED, never edit
 hosts/hn7306/strix-halo.nix   GPU memory cap, ROCm, asusd, lact, fwupd
 hosts/hn7306/ollama.nix    Ollama service, models stored in /scratch/ollama
+hosts/hn7306/llama-swap.nix   llama.cpp via llama-swap on :8080, GGUFs in /scratch/models (migration in progress)
 devnotes.md                decision log: what was decided and why
 ```
 
