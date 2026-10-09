@@ -829,3 +829,40 @@ user; a second 64K slot is about 6 GiB of KV cache in f16). Measured: Qwen3.6
 Q8 with 2 x 64K slots uses 40.9 GiB of GTT. Estimated pair: about 65 GiB, so
 pair plus VM leaves about 43 GiB for the host. Coder Q8 with two slots would
 have left about 24 GiB.
+
+**Measured after the rebuild:** the Qwen pair loaded uses 63.6 GiB of GTT
+(estimate was 63-64). Qwen3-Coder, llama-bench Vulkan, `-p 2048 -n 128`,
+tokens per second:
+
+    file          size       pp2048       tg128
+    UD-Q4_K_XL   16.5 GiB   1316 ± 68     90.4
+    Q8_0         30.3 GiB   1365 ± 35     59.8
+
+Q4 generates 51% faster (the estimate from Qwen3.6 was 25-30%; plain
+`qwen3moe` is more purely bandwidth-bound than the hybrid `qwen35moe`), with
+prompt processing equal. Confirms Q4 for OpenCode.
+
+## Ollama on demand only; llama-swap on the tailnet (2026-10-09)
+
+Step 4 of the llama.cpp migration.
+
+- **Ollama no longer starts at boot** on hn7306
+  (`systemd.services.ollama.wantedBy = lib.mkForce [ ]` in ollama.nix), so it
+  never holds GPU memory next to the Qwen pair or a VM. Start it for a
+  benchmark with `sudo systemctl start ollama`, stop it afterwards. Its context
+  and slot settings now mirror llama-swap's qwen3.6-35b instead of serving the
+  agents. phoenix still starts its Ollama at boot.
+- **llama-swap over the tailnet** with `tailscale serve`, not a Nix option:
+  tailscaled stores the serve config and keeps it across reboots, and
+  nixpkgs' `services.tailscale.serve` is built for Tailscale Services (`svc:`
+  names, tagged nodes), too much for one machine. llama-swap keeps listening
+  on 127.0.0.1 only; no firewall change. Set up (as scott, the operator):
+
+      tailscale serve --bg --https=443 http://127.0.0.1:8080
+      tailscale serve status
+
+  Clients use `https://hn7306.heron-pickerel.ts.net/v1`. To remove:
+  `tailscale serve --https=443 off`. Neither llama-swap nor llama-server has
+  authentication, so every device on the tailnet can use the models and the
+  `/ui` page (which can unload models). Restrict port 443 on hn7306 with a
+  tailnet grant if devices other than the user's own join.

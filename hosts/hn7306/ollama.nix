@@ -1,6 +1,11 @@
 # Ollama on the ROCm build. No longer what Hermes and OpenCode use (that is
 # llama-swap.nix); kept as a reference to benchmark llama.cpp against.
-{ config, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 {
   services.ollama = {
@@ -13,21 +18,19 @@
     user = "ollama";
     group = "ollama";
 
+    # The same context and slots as llama-swap's qwen3.6-35b, so benchmarks
+    # compare like with like.
     environmentVariables = {
-      # Agents need a long context; the default is far too small. Set in
-      # llm.nix, and Hermes refuses models below 64,000 tokens.
       OLLAMA_CONTEXT_LENGTH = toString config.local.llm.contextLength;
-
-      # Hermes and OpenCode share one model and are often busy at once. Two
-      # slots stop them queueing behind each other; each slot holds its own
-      # context, so memory is roughly the weights plus two contexts.
       OLLAMA_NUM_PARALLEL = "2";
-
-      # Never try to keep a second model loaded next to the first: both tools
-      # must use the same model name, or Ollama reloads it on every switch.
+      # A benchmark measures one model; a second would only take memory.
       OLLAMA_MAX_LOADED_MODELS = "1";
     };
   };
+
+  # Started by hand for a benchmark (`sudo systemctl start ollama`), so it never
+  # holds GPU memory next to llama-swap's models or a VM.
+  systemd.services.ollama.wantedBy = lib.mkForce [ ];
 
   systemd.tmpfiles.rules = [ "d /scratch/ollama 0755 ollama ollama -" ];
 }
