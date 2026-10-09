@@ -36,6 +36,7 @@ hosts/hn7306/hardware-configuration.nix   GENERATED, never edit
 hosts/hn7306/strix-halo.nix   GPU memory cap, ROCm, asusd, lact, fwupd
 hosts/hn7306/ollama.nix    Ollama (benchmark reference only), models in /scratch/ollama
 hosts/hn7306/llama-swap.nix   llama.cpp via llama-swap on :8080, GGUFs in /scratch/models
+hosts/hn7306/open-webui.nix   Open WebUI on 127.0.0.1:8081, shared on the tailnet as :8443
 devnotes.md                decision log: what was decided and why
 ```
 

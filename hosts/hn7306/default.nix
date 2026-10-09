@@ -12,6 +12,7 @@
     ./strix-halo.nix
     ./ollama.nix
     ./llama-swap.nix
+    ./open-webui.nix
     ../../hermes.nix
   ];
 

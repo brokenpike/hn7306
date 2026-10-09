@@ -866,3 +866,35 @@ Step 4 of the llama.cpp migration.
   authentication, so every device on the tailnet can use the models and the
   `/ui` page (which can unload models). Restrict port 443 on hn7306 with a
   tailnet grant if devices other than the user's own join.
+
+## Open WebUI, shared with tailnet guests (2026-10-09)
+
+Step 5 of the llama.cpp migration. `hosts/hn7306/open-webui.nix` runs Open
+WebUI 0.11.4 on `127.0.0.1:8081` (8080 is llama-swap), talking to
+llama-swap through `local.llm.baseURL`. `tailscale serve --bg --https=8443
+http://127.0.0.1:8081` publishes it as
+`https://hn7306.heron-pickerel.ts.net:8443`.
+
+- **Guests:** two people outside the tailnet get Open WebUI here and Jellyfin
+  on nixoshpe through machine sharing. The tailnet policy (admin console,
+  not in git) now gives `autogroup:member` everything and `group:guests`
+  only `hn7306:8443` and `nixoshpe:8920`; the old `"src": ["*"]` would have
+  included shared-in users and exposed llama-swap (no authentication),
+  Nextcloud, AdGuard and SSH. The policy has tests for both.
+- **Accounts:** the first account created becomes admin, so create it
+  before anyone else can reach the page. After that Open WebUI reported
+  `enable_signup: false` despite `ENABLE_SIGNUP=True` (the variable only
+  seeds the first start); guest accounts are created by the admin (Admin
+  Panel, Users), so nobody else can register.
+- **Default model `local.llm.model`** (qwen3.6-35b), Hermes' model: a guest's
+  chat shares its two slots instead of loading another model. Picking
+  deepseek-v4-flash would unload both Qwen models, so only qwen3.6-35b should
+  be visible to users (Admin panel, Models).
+- Ollama's API is off (`ENABLE_OLLAMA_API=False`): Ollama only runs for
+  benchmarks, and the page would otherwise wait for it on every load.
+- Most environment values only seed the database on the first start; later
+  the admin panel wins. Setting `environment` replaces the module's default
+  (telemetry off), so those three variables are repeated.
+- Not in the binary cache (its license counts as unfree), so it builds
+  locally: frontend and Python package, a few minutes. PyTorch (ROCm build,
+  for the embedding models) comes from the cache, about 2.9 GiB.
