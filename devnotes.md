@@ -898,3 +898,82 @@ http://127.0.0.1:8081` publishes it as
 - Not in the binary cache (its license counts as unfree), so it builds
   locally: frontend and Python package, a few minutes. PyTorch (ROCm build,
   for the embedding models) comes from the cache, about 2.9 GiB.
+
+## OpenCode 2: tried, deferred until it is in nixpkgs (2026-10-09)
+
+**Not applied.** Prepared and checked, then reverted on 2026-10-12 at the
+user's request: wait until nixpkgs packages OpenCode 2 instead of building it
+from a separate flake input. The config still uses V1 fields, which V2 also
+reads. What was found, for when it lands:
+
+OpenCode 2 was not in nixpkgs (nixos-unstable had 1.18.35). It is published
+on npm as `@opencode/cli` and tagged in github:anomalyco/opencode
+(`v2.0.26`, branch `2.0`), whose flake builds it from source with Bun. The
+tried approach: flake input `opencode` pinned to the tag, not following our
+nixpkgs (the `node_modules` hash in upstream's `nix/hashes.json` only
+matches the Bun version of upstream's nixpkgs), and
+`programs.opencode.package` from it. It built in a few minutes, uncached.
+
+**Config.** V2 reads V1 configs and converts them in memory. The native V2
+fields, to switch home.nix to once V2 is installed: `providers` (was `provider`), `package =
+"aisdk:@ai-sdk/openai-compatible"` (was `npm`), `settings.baseURL` (was
+`options`), model `settings.reasoningEffort` (was `options`),
+`agents.title.model` (was `small_model`), `update = "disable"` (was
+`autoupdate = false`), and one ordered `permissions` list of
+`{ action, resource, effect }` (was `permission.bash` etc.; `bash` is now
+`shell`). The last matching rule still wins. A shell pattern ending in ` *`
+now also matches the bare command, so `git diff` next to `git diff *` was
+dropped. Checked with V2's own `opencode debug config` against the generated
+file of both hosts, in a throwaway XDG directory: no warnings, values as
+intended (phoenix keeps `reasoningEffort: low`).
+
+**Other V2 changes that matter here:**
+
+- **Background service.** V2 starts `opencode serve --service` (127.0.0.1,
+  port 13420, random password in `~/.local/state/opencode/service-prod.json`)
+  and keeps it running after the client exits; the client connects to it.
+  After a rebuild that changes OpenCode, the old binary keeps running until
+  `opencode service restart`. `--standalone` runs a private server instead.
+- **Plugins:** V1 plugins do not load in V2. None were in use;
+  `~/.config/opencode/{package.json,node_modules}` only held the
+  `@opencode-ai/plugin` type package that V1 installs by itself, and can be
+  deleted.
+- **Sessions:** V2 uses the same `~/.local/share/opencode/opencode.db` as
+  V1. Copy it before the first V2 start, so V1 sessions survive if V2 changes
+  the database and a rollback to V1 is needed.
+- Terminal UI settings move from `tui.json` to one `cli.json` (automatic);
+  none were set.
+
+## Wi-Fi hotspot needs DHCP and DNS open on the Wi-Fi card (2026-10-12)
+
+An iPhone SE 3 cannot take internet over USB or Bluetooth from a computer
+(iOS only shares, it never receives), so hn7306 shares its wired connection
+as a Wi-Fi hotspot (`nmcli device wifi hotspot …`, NetworkManager "shared"
+mode; needs a second uplink, here the USB Ethernet, because the card cannot
+be client and hotspot at once). The iPhone reported "IP configuration
+failure": NetworkManager's dnsmasq started (range 10.42.0.10-254) but the
+firewall, which trusts only `lo`, dropped DHCP (UDP 67) and DNS (53) on
+`wlp194s0`. Fixed with `networking.firewall.interfaces.wlp194s0` in
+hosts/hn7306/default.nix (interface name is machine-specific). Nothing
+listens on those ports unless the hotspot is on. Tested with temporary
+iptables rules first. Clients' DNS goes through dnsmasq to Tailscale's DNS
+(AdGuard); with nixoshpe as exit node their traffic goes through it too.
+
+**Using it.** `nmcli device wifi hotspot …` creates a new profile on every
+run (there were `Hotspot` and `Hotspot-1`), so start the saved one instead.
+The profile is `iphone-hotspot` (renamed from `Hotspot-1`, SSID `iphone`,
+`autoconnect no`, so it never starts by itself):
+
+    nmcli connection up iphone-hotspot
+    nmcli connection down iphone-hotspot
+    nmcli -t -f NAME,DEVICE,STATE connection show --active | grep hotspot
+    nmcli device wifi show-password      # also prints a QR code to scan
+    ip neigh show dev wlp194s0           # connected clients
+    ip route get 1.1.1.1 from 10.42.0.10 iif wlp194s0
+
+The last line shows where clients' traffic leaves: the wired interface
+(direct), `tailscale0` (exit node) or Proton's interface. Clients follow the
+host's routing and DNS, VPN included; Proton's kill switch may block
+forwarded traffic, and Proton plus the Tailscale exit node at once should be
+avoided. The hotspot is IPv4 only, so there is no IPv6 path around a VPN.
+A client running its own Tailscale exit node overrides all of this.

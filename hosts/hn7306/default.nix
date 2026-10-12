@@ -23,6 +23,18 @@
   # suspend, and defaults to 100%, which overrode asusd's 80%. Keep both at 80.
   hardware.asus.battery.chargeUpto = 80;
 
+  # Wi-Fi hotspot (NetworkManager "shared" mode, e.g. for the iPhone): its
+  # dnsmasq hands out addresses and DNS on the Wi-Fi card, which the firewall
+  # blocked ("IP configuration failure" on the client). Nothing listens on
+  # these ports unless the hotspot is on.
+  networking.firewall.interfaces.wlp194s0 = {
+    allowedUDPPorts = [
+      53
+      67
+    ];
+    allowedTCPPorts = [ 53 ];
+  };
+
   # What Hermes and OpenCode use. The names are llama-swap model IDs, defined
   # in llama-swap.nix; Ollama stays installed only as a benchmark reference.
   local.llm = {
