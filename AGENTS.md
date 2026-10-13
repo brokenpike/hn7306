@@ -114,9 +114,12 @@ nix eval --json .#nixosConfigurations.hn7306.config.<option>
 - Ollama silently fell back to CPU after a rebuild. After any change that
   restarts Ollama, the user should confirm
   `journalctl -u ollama --no-pager -o cat | grep 'inference compute' | tail -1`
-  says `library=ROCm`, and that `ollama ps` shows `100% GPU`. For llama-swap,
-  `journalctl -u llama-swap --no-pager -o cat | grep -E 'ggml_vulkan|offloaded'`
-  should name the Radeon 8060S and offload all layers.
+  says `library=ROCm`, and that `ollama ps` shows `100% GPU`. For llama-swap
+  (llama.cpp 0.6.0 no longer logs the device or offloaded layers), with a
+  model loaded: `cat /sys/class/drm/card1/device/mem_info_gtt_used` should be
+  about the model's size (Coder Q4 ~24 GiB), and
+  `journalctl -u llama-swap -o cat | grep "eval time" | tail -2` should show
+  generation in the tens of tokens per second (CPU would be ~10).
 - A Tailscale exit node routes the VM subnet (192.168.122.0/24) into the
   tunnel, which breaks the internet of VMs on libvirt's bridge (`virbr0`).
   quickemu's default NAT (user-mode networking) connects from the host itself,

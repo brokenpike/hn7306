@@ -1086,3 +1086,20 @@ Cloudflare, and `vivia-v5587.vegtamr.online` reaches Vivia (FastAPI:
 `/health`, `/docs` and `/openapi.json` 200, 404 at `/`). Vivia's `/docs` is
 public on the internet with no login in front; Cloudflare Access on that
 hostname would add one. `v5817` stays 530 while visure8405817 is off.
+
+## llama-swap: llama-server output in the journal (2026-10-13)
+
+The GPU check in AGENTS.md (`journalctl -u llama-swap | grep -E
+'ggml_vulkan|offloaded'`) found nothing: llama-swap's `logToStdout`
+defaults to `proxy`, which sends only its own request lines to stdout (and
+so to the journal); llama-server's output stayed in llama-swap's internal
+log (`/logs` shows the proxy part only). Set to `both` in
+hosts/hn7306/llama-swap.nix. Takes effect on llama-swap's restart, i.e.
+after the next switch, for models loaded after it.
+
+Even with `both`, llama.cpp 0.6.0 (verbosity 3) prints no device or
+`offloaded … layers` lines any more, so that check stays empty. GPU use is
+shown instead by GTT memory (`mem_info_gtt_used` 23.8 GiB with Coder Q4
+loaded) and the timings in the journal (Coder: 52 tokens/s generation and
+700-1,200 tokens/s prompt processing on a 12.8K-token prompt). AGENTS.md
+now uses that check.

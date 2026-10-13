@@ -46,6 +46,11 @@ in
       # A model on /scratch can take minutes to load the first time after boot.
       healthCheckTimeout = 600;
 
+      # The default ("proxy") keeps llama-server's own output out of the
+      # journal. "both" adds it: model loads, errors and per-request timings
+      # (the speed check in AGENTS.md).
+      logToStdout = "both";
+
       models = {
         "qwen3.6-35b" = {
           cmd = server vulkan [
