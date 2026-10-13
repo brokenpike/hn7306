@@ -15,8 +15,9 @@ it is an application; every file is Nix (or docs).
 - What runs on it: llama.cpp behind llama-swap (local LLM server; Ollama kept
   only as a benchmark reference), Hermes Agent (a persistent assistant, native
   systemd service), Windows VMs for Visure testing (quickemu, one folder per VM
-  under `/scratch/visure-clones`, about 16 GiB each; libvirt and GNOME Boxes are
-  still installed), Tailscale, zram swap.
+  under `/scratch/visure-clones`, 16 GiB RAM each; copies also run on phoenix
+  in `~/vms`, see devnotes.md; libvirt and GNOME Boxes are still installed),
+  Tailscale (with Tailscale SSH), zram swap.
 - A second host, `phoenix` (Framework 13 laptop), runs its own Ollama with
   `gpt-oss:20b`. The user may add the niri window manager, and wants to try
   the nebula mesh VPN.

@@ -992,3 +992,78 @@ Verified 2026-10-13: `ssh scott@hn7306` from phoenix logs in.
 In nix-hpe, a changed `extraSetFlags` did not rerun `tailscaled-set` at
 the switch; if a flag seems missing after a rebuild, run
 `sudo systemctl restart tailscaled-set`.
+
+## Tailnet users vs shares; policy for guests (2026-10-11)
+
+The tailnet policy lives in the admin console, not in git; this records it.
+
+- **Users vs shares.** A *user* is a member of this tailnet: their devices
+  join it, and `autogroup:member` covers them. A *share* gives one machine to
+  someone who stays in their own tailnet. Guests should get shares only.
+- **What the Users page showed (2026-10-11):** Thor Askey
+  (thorinnnorway67@gmail.com) is an **Admin** member since 2024-04-01, and
+  geirkepler4@gmail.com has a pending **user invitation** (Member) instead of
+  a share. Either would get full access through the `autogroup:member` rule
+  and could, as admin, change the policy. Action for the owner: revoke Geir's
+  invite and share the machines instead; remove Thor or at least demote him.
+- **The test account** vegtamr-no@github (Latitude 5400, Fedora, its own
+  tailnet "vegtamr") failed the policy tests as a guest: Tailscale counted it
+  as a member, apparently because GitHub logins look like members of a
+  GitHub-based tailnet (`brokenpike.github`). Not confirmed.
+- **Proposed fix, independent of who counts as a member:** give `*:*` to
+  `brokenpike@github` explicitly instead of `autogroup:member`; guests
+  (`group:guests`) get `hn7306:8443` and `nixoshpe:8920`; vegtamr-no also
+  `hn7306:22`. `ssh` rules: owner to own devices as non-root only (no root,
+  use sudo), vegtamr-no to `scott`, both in check mode. The `tests` block
+  checks every guest's allowed and denied ports. Whether this version was
+  saved, and Thor's and Geir's status, were not confirmed when this was
+  written.
+
+## USB-C networking between laptops needs a USB4 cable (2026-10-12)
+
+hn7306 has two USB4 controllers and the `thunderbolt_net` driver: a USB4 or
+Thunderbolt cable to another USB4 laptop (phoenix's USB4 ports) gives a
+`thunderbolt0` network link that `ipv4.method shared` can share, like the
+hotspot (its firewall would need DHCP/DNS on `thunderbolt0` too). The
+available cables are charging-only: nothing appeared in
+`/sys/bus/thunderbolt/devices/`. Use the Wi-Fi hotspot until a "Thunderbolt
+4" / "USB4 40Gbps" cable exists. For speed it only matters if the other
+laptop's own link is slow: hn7306 measured 290 Mbit/s, the Latitude ~90.
+
+## Visure VMs copied to phoenix (2026-10-12)
+
+Both quickemu VMs were copied to phoenix `~/vms` (originals still in
+`/scratch/visure-clones` on hn7306). `qemu-img convert -O qcow2` made each
+disk self-contained: visure8305587 was an overlay on
+`/scratch/visure-golden-v2/windows-11/disk.qcow2` (now flattened, 35.9
+GiB), visure8405817 lost two old internal snapshots (`pre-virtio-scsi-fix`,
+77 -> 44.7 GiB). Also copied: `OVMF_VARS.fd`, `tpm2-00.permall` (TPM
+state), the `.conf`. Transport: the USB SSD stick at `/mnt/llms` (btrfs,
+~460 MB/s, faster than gigabit rsync); on phoenix it was only detected on
+the USB-A port of the Ethernet adapter. On phoenix: `ram="10G"`,
+`cpu_cores="4"` (38 GiB, 6 cores), one VM at a time; visure8305587 got
+`ssh_port="25587"`.
+
+- **SSH from hn7306:** `~/.ssh/config` alias `v5587` (ProxyJump
+  scott@phoenix, port 25587, `HostKeyAlias v5587`); phoenix answers with
+  Tailscale SSH. `v5817` still points at hn7306's localhost:25817.
+- **Vivia in the VM** (`vivia.exe` on 127.0.0.1:8000) can use hn7306's model:
+  base URL `https://hn7306.heron-pickerel.ts.net/v1`, model `qwen3.6-35b`,
+  any API key. Tested from inside the VM; tailnet DNS works through
+  quickemu's NAT, no hosts entry needed. The first request after 30 idle
+  minutes waits for the model to load.
+- **Cloudflare tunnels run inside the VMs** (`cloudflared` with
+  `C:\Users\Quickemu\.cloudflared\config.yml`): v5817 for visure8405817,
+  `v5587` and `vivia-v5587.vegtamr.online` for visure8305587. Error 1033
+  (HTTP 530) means no connector: either the VM is off or `cloudflared` is
+  stuck (`/ready` on 127.0.0.1:20241 returned 503, no connections, although
+  TCP 7844 to the edge was open). Fix proposed: `protocol: http2` in
+  `config.yml` and a Windows service (`New-Service … tunnel run`) instead of
+  a process started by hand, which also dies with the SSH session that
+  started it. The VM's clock ran an hour ahead (time zone +01:00 without
+  DST): `Set-TimeZone -Id "W. Europe Standard Time"`.
+- **Original and copy share the tunnel credentials.** If both run
+  `cloudflared`, Cloudflare spreads requests over two VMs with separate
+  databases. Only one copy may run the tunnel. Which copy is the live one,
+  and whether the originals on hn7306 are kept, was not decided when this was
+  written.
