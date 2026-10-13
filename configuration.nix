@@ -76,13 +76,6 @@
   services.xserver.enable = true;
   services.displayManager.gdm.enable = true;
 
-  # Keyboard layout (X11 and Wayland)
-  services.xserver.xkb = {
-    layout = "no,us";
-    variant = "";
-  };
-  console.keyMap = "no";
-
   services.flatpak.enable = true;
 
   # --- Audio and printing ---
