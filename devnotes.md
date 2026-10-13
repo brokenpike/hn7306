@@ -1007,10 +1007,11 @@ The tailnet policy lives in the admin console, not in git; this records it.
   (thorinnnorway67@gmail.com) is an **Admin** member since 2024-04-01, and
   geirkepler4@gmail.com has a pending **user invitation** (Member) instead of
   a share. Either would get full access through the `autogroup:member` rule
-  and could, as admin, change the policy. **Decision (2026-10-13):** Geir's
-  user invite is left as it is; **Thor was removed as a tailnet user** (no
-  admin access any more) and is to get shares of hn7306 and nixoshpe
-  instead.
+  and could, as admin, change the policy. **Decision (2026-10-13):**
+  **Thor was removed as a tailnet user** (no admin access any more) and
+  is to get shares of hn7306 and nixoshpe instead. Later the same day
+  Geir's user invite was revoked too, and he was sent a share of nixoshpe
+  (Jellyfin); he already had hn7306.
   Accepted shares seen by the machines on 2026-10-13: Geir and vegtamr-no on
   hn7306, vegtamr-no on nixoshpe; Thor none. Unused invites expire after 30
   days (user invite links and machine share links); accepted shares and
@@ -1078,3 +1079,10 @@ the USB-A port of the Ethernet adapter. On phoenix: `ram="10G"`,
   databases. Only one copy may run the tunnel. Which copy is the live one,
   and whether the originals on hn7306 are kept, was not decided when this was
   written.
+
+**v5587 tunnel back (2026-10-13):** after the fix in the VM,
+`v5587.vegtamr.online` and `/VisureAuthoring8/` answer 200 through
+Cloudflare, and `vivia-v5587.vegtamr.online` reaches Vivia (FastAPI:
+`/health`, `/docs` and `/openapi.json` 200, 404 at `/`). Vivia's `/docs` is
+public on the internet with no login in front; Cloudflare Access on that
+hostname would add one. `v5817` stays 530 while visure8405817 is off.
