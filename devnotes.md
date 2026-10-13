@@ -877,10 +877,11 @@ http://127.0.0.1:8081` publishes it as
 
 - **Guests:** two people outside the tailnet get Open WebUI here and Jellyfin
   on nixoshpe through machine sharing. The tailnet policy (admin console,
-  not in git) now gives `autogroup:member` everything and `group:guests`
+  not in git) then gave `autogroup:member` everything and `group:guests`
   only `hn7306:8443` and `nixoshpe:8920`; the old `"src": ["*"]` would have
   included shared-in users and exposed llama-swap (no authentication),
-  Nextcloud, AdGuard and SSH. The policy has tests for both.
+  Nextcloud, AdGuard and SSH. The policy has tests for both. Superseded: see
+  "Tailnet users vs shares" below; `autogroup:member` also covered Thor.
 - **Accounts:** the first account created becomes admin, so create it
   before anyone else can reach the page. After that Open WebUI reported
   `enable_signup: false` despite `ENABLE_SIGNUP=True` (the variable only
@@ -987,7 +988,9 @@ runtime (`tailscale debug prefs`: `"RunSSH": true`, set by hand); this makes
 it part of the config. Tailscale answers port 22 on the tailnet address and
 authorizes by tailnet identity through the policy's `ssh` section (owner to
 own devices, as a non-root user or root, in check mode); OpenSSH still
-serves the LAN with its own keys and passwords. phoenix does not have it.
+serves the LAN with its own keys and passwords. phoenix has it switched on
+by hand (on 2026-10-12 it accepted `ssh scott@phoenix` with auth method
+`none`, which only Tailscale SSH does), but not in its Nix config.
 Verified 2026-10-13: `ssh scott@hn7306` from phoenix logs in.
 In nix-hpe, a changed `extraSetFlags` did not rerun `tailscaled-set` at
 the switch; if a flag seems missing after a rebuild, run
@@ -1004,8 +1007,14 @@ The tailnet policy lives in the admin console, not in git; this records it.
   (thorinnnorway67@gmail.com) is an **Admin** member since 2024-04-01, and
   geirkepler4@gmail.com has a pending **user invitation** (Member) instead of
   a share. Either would get full access through the `autogroup:member` rule
-  and could, as admin, change the policy. Action for the owner: revoke Geir's
-  invite and share the machines instead; remove Thor or at least demote him.
+  and could, as admin, change the policy. **Decision (2026-10-13):** Geir's
+  user invite is left as it is; **Thor was removed as a tailnet user** (no
+  admin access any more) and is to get shares of hn7306 and nixoshpe
+  instead.
+  Accepted shares seen by the machines on 2026-10-13: Geir and vegtamr-no on
+  hn7306, vegtamr-no on nixoshpe; Thor none. Unused invites expire after 30
+  days (user invite links and machine share links); accepted shares and
+  existing users do not expire.
 - **The test account** vegtamr-no@github (Latitude 5400, Fedora, its own
   tailnet "vegtamr") failed the policy tests as a guest: Tailscale counted it
   as a member, apparently because GitHub logins look like members of a
@@ -1015,9 +1024,11 @@ The tailnet policy lives in the admin console, not in git; this records it.
   (`group:guests`) get `hn7306:8443` and `nixoshpe:8920`; vegtamr-no also
   `hn7306:22`. `ssh` rules: owner to own devices as non-root only (no root,
   use sudo), vegtamr-no to `scott`, both in check mode. The `tests` block
-  checks every guest's allowed and denied ports. Whether this version was
-  saved, and Thor's and Geir's status, were not confirmed when this was
-  written.
+  checks every guest's allowed and denied ports. **Not saved yet on
+  2026-10-13:** hn7306's netmap still had `root` in the SSH rules and no
+  port 22 rule for vegtamr-no; the saved version still gives
+  `autogroup:member` `*:*` and had Thor's test removed. Check with
+  `tailscale debug netmap` (`SSHPolicy`, `PacketFilter`).
 
 ## USB-C networking between laptops needs a USB4 cable (2026-10-12)
 
