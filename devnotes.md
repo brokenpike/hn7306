@@ -977,3 +977,18 @@ host's routing and DNS, VPN included; Proton's kill switch may block
 forwarded traffic, and Proton plus the Tailscale exit node at once should be
 avoided. The hotspot is IPv4 only, so there is no IPv6 path around a VPN.
 A client running its own Tailscale exit node overrides all of this.
+
+## Tailscale SSH on hn7306 (2026-10-12)
+
+`services.tailscale.extraSetFlags = [ "--ssh" ]` in hosts/hn7306/default.nix
+(lists merge, so the shared `--exit-node-allow-lan-access` and
+`--operator=scott` from configuration.nix stay). It was already on at
+runtime (`tailscale debug prefs`: `"RunSSH": true`, set by hand); this makes
+it part of the config. Tailscale answers port 22 on the tailnet address and
+authorizes by tailnet identity through the policy's `ssh` section (owner to
+own devices, as a non-root user or root, in check mode); OpenSSH still
+serves the LAN with its own keys and passwords. phoenix does not have it.
+Verified 2026-10-13: `ssh scott@hn7306` from phoenix logs in.
+In nix-hpe, a changed `extraSetFlags` did not rerun `tailscaled-set` at
+the switch; if a flag seems missing after a rebuild, run
+`sudo systemctl restart tailscaled-set`.

@@ -23,6 +23,11 @@
   # suspend, and defaults to 100%, which overrode asusd's 80%. Keep both at 80.
   hardware.asus.battery.chargeUpto = 80;
 
+  # Tailscale SSH: logins over the tailnet use the Tailscale identity and the
+  # policy's "ssh" rules instead of keys or passwords. Added to the flags in
+  # configuration.nix; OpenSSH still serves the LAN.
+  services.tailscale.extraSetFlags = [ "--ssh" ];
+
   # Wi-Fi hotspot (NetworkManager "shared" mode, e.g. for the iPhone): its
   # dnsmasq hands out addresses and DNS on the Wi-Fi card, which the firewall
   # blocked ("IP configuration failure" on the client). Nothing listens on
