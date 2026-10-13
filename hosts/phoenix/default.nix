@@ -25,4 +25,11 @@
     # tokens/s that is most of every agent step.
     reasoningEffort = "low";
   };
+
+  # Keyboard layout for Phoenix (US)
+  services.xserver.xkb = {
+    layout = "us";
+    variant = "";
+  };
+  console.keyMap = "us";
 }

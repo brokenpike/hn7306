@@ -19,6 +19,13 @@
   # Must match the nixosConfigurations attribute name in flake.nix.
   networking.hostName = "hn7306";
 
+  # Keyboard layout for hn7306 (Norwegian)
+  services.xserver.xkb = {
+    layout = "no,us";
+    variant = "";
+  };
+  console.keyMap = "no";
+
   # The hardware profile's battery service writes this limit at boot and after
   # suspend, and defaults to 100%, which overrode asusd's 80%. Keep both at 80.
   hardware.asus.battery.chargeUpto = 80;
