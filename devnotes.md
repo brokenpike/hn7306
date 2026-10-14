@@ -1103,3 +1103,16 @@ shown instead by GTT memory (`mem_info_gtt_used` 23.8 GiB with Coder Q4
 loaded) and the timings in the journal (Coder: 52 tokens/s generation and
 700-1,200 tokens/s prompt processing on a 12.8K-token prompt). AGENTS.md
 now uses that check.
+
+**Update (2026-10-14): it works with a Deltaco USBC-1122** (1 m,
+full-featured USB-C, USB 3.2 Gen 2 10 Gbit/s, e-marker; not a certified USB4
+cable). hn7306 saw phoenix as `1-2` ("Linux phoenix"), link 2 x 10 Gbit/s =
+20 Gbit/s, `thunderbolt0` up. NetworkManager gives both ends link-local
+addresses by itself (hn7306 169.254.122.129 and fe80::…; phoenix
+fe80::f565:9a19:379e:c01a), so no shared mode is needed just to copy
+files: `rsync … 'scott@[fe80::…%thunderbolt0]:'`. OpenSSH answers there,
+not Tailscale SSH, so phoenix needs hn7306's key in
+`users.users.scott.openssh.authorizedKeys.keys` (now in
+hosts/phoenix/default.nix); before that it had none, as every earlier login
+went through Tailscale SSH. Use `-o HostKeyAlias=phoenix` so the known host
+key matches.

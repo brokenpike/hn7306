@@ -32,4 +32,10 @@
     variant = "";
   };
   console.keyMap = "us";
+
+  # hn7306's key, for OpenSSH logins that do not go through Tailscale SSH,
+  # e.g. over the USB4 cable (thunderbolt0, link-local addresses).
+  users.users.scott.openssh.authorizedKeys.keys = [
+    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAnRfgI8QRF1wKIhfrGQwSckCDk1JV0eCIbtDw8y3ZFw scott@hn7306"
+  ];
 }
