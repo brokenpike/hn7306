@@ -90,6 +90,25 @@
     HandleLidSwitchDocked = "ignore";
   };
 
+  # Power profile follows the charger: power-saver on battery, balanced on
+  # mains power (GNOME itself only switches when the battery is low). Only
+  # the ACPI adapter (type Mains: AC0, ACAD) counts; the USB-C ports report as
+  # type USB and change when a phone is plugged in. udev starts a service
+  # instead of calling power-profiles-daemon itself, which it should not wait
+  # on.
+  services.udev.extraRules = ''
+    SUBSYSTEM=="power_supply", ATTR{type}=="Mains", ATTR{online}=="0", RUN+="${config.systemd.package}/bin/systemctl start --no-block power-profile@power-saver.service"
+    SUBSYSTEM=="power_supply", ATTR{type}=="Mains", ATTR{online}=="1", RUN+="${config.systemd.package}/bin/systemctl start --no-block power-profile@balanced.service"
+  '';
+  systemd.services."power-profile@" = {
+    description = "Set the power profile to %i";
+    after = [ "power-profiles-daemon.service" ];
+    serviceConfig = {
+      Type = "oneshot";
+      ExecStart = "${config.services.power-profiles-daemon.package}/bin/powerprofilesctl set %i";
+    };
+  };
+
   # The login screen runs its own settings daemon with GNOME's defaults,
   # which suspend after 15 minutes even on mains power: after a reboot,
   # before anyone logs in, the machine would drop off the tailnet.

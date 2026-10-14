@@ -206,14 +206,15 @@ in
     };
   };
   # GNOME power: never suspend on mains power (the machines serve the tailnet,
-  # see the Power section in configuration.nix), suspend after 30 minutes on
-  # battery. The screen goes off after 10 minutes either way, which saves
-  # most of the idle power while keeping the machine reachable.
+  # see the Power section in configuration.nix), suspend after 15 minutes on
+  # battery (GNOME's default). The screen goes off after 10 minutes either
+  # way, which saves most of the idle power while keeping the machine
+  # reachable.
   dconf.settings = {
     "org/gnome/settings-daemon/plugins/power" = {
       sleep-inactive-ac-type = "nothing";
       sleep-inactive-battery-type = "suspend";
-      sleep-inactive-battery-timeout = 1800;
+      sleep-inactive-battery-timeout = 900;
     };
     "org/gnome/desktop/session".idle-delay = lib.hm.gvariant.mkUint32 600;
   };

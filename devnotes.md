@@ -1262,3 +1262,14 @@ reboot**, then check with the `busctl` line. hn7306 stayed awake only
 because it was docked (external monitor, `HandleLidSwitchDocked=ignore`).
 Confirmed on phoenix after the HUP: running value `ignore`, lid closed at
 14:57 on mains power, "Lid closed" logged without a suspend, SSH answered.
+
+**Laptop behaviour on battery (same day):** idle suspend on battery back to
+GNOME's 15 minutes (was 30), and the power profile now follows the charger:
+a udev rule on the ACPI adapter (`type == Mains`: `AC0` on hn7306, `ACAD` on
+phoenix; the USB-C `ucsi-source-psy-*` supplies are type `USB` and change
+with any phone, so they are not matched) starts `power-profile@power-saver`
+when it goes offline and `power-profile@balanced` when it comes back. The
+template service runs `powerprofilesctl set %i`; udev only starts it
+(`systemctl start --no-block`) instead of calling the daemon itself. Booting
+on battery fires no change event; power-profiles-daemon then keeps the last
+profile. Check with `powerprofilesctl get` after unplugging and plugging in.
