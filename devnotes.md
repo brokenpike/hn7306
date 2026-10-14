@@ -1249,3 +1249,16 @@ quickemu runs QEMU directly and GNOME Boxes uses the user session.
 (firmware update gone wrong, TPM cleared in the BIOS, battery or CMOS
 removed). Other TPM-sealed things would fail the same way, e.g. a
 TPM-unlocked LUKS volume or other `systemd-creds` secrets.
+
+**Lid still suspended phoenix after the switch (same day):** closing the lid
+on mains power suspended it (`systemd-logind: Lid closed. Suspending...`).
+Not GNOME (no lid inhibitor held); the running logind still had the old
+values (`busctl get-property org.freedesktop.login1 /org/freedesktop/login1
+org.freedesktop.login1.Manager HandleLidSwitchExternalPower` returned `""`)
+although `/etc/systemd/logind.conf` had `ignore`. `nixos-rebuild switch` does
+not restart systemd-logind (a restart could end sessions), so **after any
+logind change: `sudo systemctl kill -s HUP systemd-logind` (reload) or
+reboot**, then check with the `busctl` line. hn7306 stayed awake only
+because it was docked (external monitor, `HandleLidSwitchDocked=ignore`).
+Confirmed on phoenix after the HUP: running value `ignore`, lid closed at
+14:57 on mains power, "Lid closed" logged without a suspend, SSH answered.
