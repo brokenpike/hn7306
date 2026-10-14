@@ -1116,3 +1116,67 @@ not Tailscale SSH, so phoenix needs hn7306's key in
 hosts/phoenix/default.nix); before that it had none, as every earlier login
 went through Tailscale SSH. Use `-o HostKeyAlias=phoenix` so the known host
 key matches.
+
+## Translation models in llama-swap (2026-10-14)
+
+Three small models for English <-> Norwegian, in llama-swap group
+`translate` (`swap = true`: one at a time; `exclusive = false`: loading one
+leaves the Qwen pair loaded, about 65 + at most 13 GiB). Loading a Qwen model
+or DeepSeek unloads it (their groups are exclusive). All Q8_0: small dense
+models lose more to quantization than the big MoEs, and Q8_0 is fast on
+Vulkan (BF16 is not supported there). 16K context, one slot.
+
+| Model ID | Source | Notes |
+|---|---|---|
+| `normistral-11b-translate` | ltg/normistral-11b-translate (University of Oslo), converted to GGUF | Fine-tuned for nb/nn/en in all directions. System message = target language: `bokmål`, `nynorsk` or `engelsk` (default); user message = text. Greedy (`--temp 0`). |
+| `gemma-4-e4b` | unsloth/gemma-4-E4B-it-GGUF Q8_0 | General model, strong in Nordic languages; `--reasoning off`. ~35 tokens/s. |
+| `translategemma-4b` | mradermacher/translategemma-4b-it-GGUF Q8_0 | Google's translation model; its template lists nb, nn, no. ~44 tokens/s. |
+
+**TranslateGemma's template** only accepts structured user content
+(`[{type, source_lang_code, target_lang_code, text}]`) and raises an error on
+plain text, which Open WebUI sends. llama-swap.nix passes a plain Gemma
+template (`--chat-template-file`, written with `pkgs.writeText`). The prompt
+then carries the instruction; TranslateGemma's own wording works well:
+
+    You are a professional English (en) to Norwegian Bokmål (nb) translator.
+    Produce only the Norwegian Bokmål translation, without any additional
+    explanations or commentary. Please translate the following English text
+    into Norwegian Bokmål:
+
+    <text>
+
+**NorMistral conversion** (only safetensors on Hugging Face): llama.cpp's
+`convert_hf_to_gguf.py` from the same source as the installed llama.cpp
+0.6.0 (`pkgs.llama-cpp.src`), run with a `python3.withPackages` env (numpy,
+sentencepiece, safetensors, transformers, torch, protobuf) from the pinned
+nixpkgs, `PYTHONPATH=$src/gguf-py:$src`, `--outtype q8_0` directly (no
+intermediate F16 file). Architecture `MistralForCausalLM`. Two fixes were needed:
+
+- The repo has two chat templates: the real one in `chat_template.jinja`
+  (`<s><source> {text}</source>\n\n## {target}:\n<target>`) and a stale
+  one in `tokenizer_config.json` (`<instruction>`, `<system_prompt>`).
+  transformers 5.17 also adds four tokens (ids 51200-51203,
+  `<instruction>`, `</instruction>`, `<system_prompt>`,
+  `</system_prompt>`) above the model's `vocab_size` 51200, which trips
+  the converter's `assert max(tokenizer.vocab.values()) < vocab_size`.
+  Fix: a folder `hf-fixed` with symlinks to the model files and a copy of
+  `tokenizer_config.json` whose `chat_template` is `chat_template.jinja`;
+  plus a scratch copy of the converter with that assert removed (ids at or
+  above 51200 are skipped anyway, and the translation template never uses
+  those tags).
+- The pre-tokenizer hash is unknown to llama.cpp. ltg's own GGUF of
+  normistral-11b-thinking uses `tokenizer.ggml.model = gpt2`,
+  `tokenizer.ggml.pre = tekken` (Mistral NeMo's), so the scratch copy
+  defaults to `tekken`. Confirmed by the output: bokmål -> nynorsk gives
+  exactly the model card's example, "Kva er hovudstaden i Noreg?".
+
+Result: 12.1 GB Q8_0, 16 tokens/s (dense 11B; Q6_K would be ~25% faster).
+The repo also ships `pytorch_model.bin` (22.9 GB, same weights), which
+the converter does not use.
+
+Test sentence ("The requirement must be traceable to at least one test case,
+and every change has to be approved by the project owner before release."):
+TranslateGemma "Kravet må kunne spores tilbake til minst ett testtilfelle, og
+hver endring må godkjennes av prosjektansvarlig før den blir publisert.";
+Gemma 4 E4B "Kravet må spores til minst ett testtilfelle, og enhver endring
+må godkjennes av prosjekteieren før utgivelse."

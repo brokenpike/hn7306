@@ -1,6 +1,6 @@
 # llama.cpp behind llama-swap: one OpenAI-compatible endpoint on port 8080
-# that starts and stops llama-server per model. Runs next to Ollama during the
-# migration; nothing points at it yet.
+# that starts and stops llama-server per model. Hermes, OpenCode and Open
+# WebUI use it (local.llm.baseURL); Ollama is only a benchmark reference.
 {
   config,
   lib,
@@ -35,6 +35,27 @@ let
       ]
       ++ flags
     );
+
+  # TranslateGemma's own template only accepts structured messages
+  # (source_lang_code, target_lang_code, text) and errors on plain text, which
+  # Open WebUI sends. This is the plain Gemma turn format instead; the
+  # language instruction goes in the prompt (see devnotes.md).
+  gemmaPlainTemplate = pkgs.writeText "gemma-plain.jinja" ''
+    {{ bos_token }}
+    {%- for message in messages -%}
+    {%- if message['role'] == 'assistant' -%}
+    {{ '<start_of_turn>model\n' + message['content'] | trim + '<end_of_turn>\n' }}
+    {%- else -%}
+    {{ '<start_of_turn>user\n' + message['content'] | trim + '<end_of_turn>\n' }}
+    {%- endif -%}
+    {%- endfor -%}
+    {%- if add_generation_prompt -%}
+    {{ '<start_of_turn>model\n' }}
+    {%- endif -%}
+  '';
+
+  # Translation models: one document per request, no long agent context.
+  translateCtx = "16384";
 in
 {
   services.llama-swap = {
@@ -92,6 +113,47 @@ in
           ];
           ttl = 1800;
         };
+
+        # University of Oslo, fine-tuned for Bokmål/Nynorsk/English in all
+        # directions. The system message is the target language ("bokmål",
+        # "nynorsk" or "engelsk", the default); the user message is the text.
+        # Converted from ltg/normistral-11b-translate (see devnotes.md).
+        # Greedy decoding, as its model card uses.
+        "normistral-11b-translate" = {
+          cmd = server vulkan [
+            "--model ${models}/normistral-11b-translate/normistral-11b-translate-Q8_0.gguf"
+            "--ctx-size ${translateCtx}"
+            "--parallel 1"
+            "--temp 0"
+          ];
+          ttl = 1800;
+        };
+
+        # General multilingual model, good at Nordic languages for its size.
+        # Thinking off: translation does not need it and it costs time.
+        "gemma-4-e4b" = {
+          cmd = server vulkan [
+            "--model ${models}/gemma-4-e4b/gemma-4-E4B-it-Q8_0.gguf"
+            "--ctx-size ${translateCtx}"
+            "--parallel 1"
+            "--reasoning off"
+            "--temp 0.3"
+          ];
+          ttl = 1800;
+        };
+
+        # Google's translation model (55 languages, nb/nn/no included), with a
+        # plain template so ordinary chat messages work.
+        "translategemma-4b" = {
+          cmd = server vulkan [
+            "--model ${models}/translategemma-4b/translategemma-4b-it.Q8_0.gguf"
+            "--chat-template-file ${gemmaPlainTemplate}"
+            "--ctx-size ${translateCtx}"
+            "--parallel 1"
+            "--temp 0"
+          ];
+          ttl = 1800;
+        };
       };
 
       # The two Qwen models stay loaded together (about 65 GiB with context).
@@ -103,6 +165,20 @@ in
         members = [
           "qwen3.6-35b"
           "qwen3-coder-30b"
+        ];
+      };
+
+      # English <-> Norwegian translation, Q8_0 (small dense models lose
+      # more to quantization than the big MoEs). One loaded at a time (swap),
+      # next to the Qwen pair (not exclusive): at most ~13 GiB on top of its
+      # ~65. Loading a Qwen model or DeepSeek unloads it.
+      groups.translate = {
+        swap = true;
+        exclusive = false;
+        members = [
+          "normistral-11b-translate"
+          "gemma-4-e4b"
+          "translategemma-4b"
         ];
       };
     };
