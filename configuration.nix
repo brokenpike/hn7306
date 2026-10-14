@@ -78,6 +78,29 @@
 
   services.flatpak.enable = true;
 
+  # --- Power ---
+
+  # On mains power the machines stay awake, so Hermes, Open WebUI, llama-swap
+  # and SSH keep answering over the tailnet; a suspended machine is offline.
+  # On battery they still suspend. The user's own GNOME timeouts are in
+  # home.nix.
+  services.logind.settings.Login = {
+    HandleLidSwitch = "suspend";
+    HandleLidSwitchExternalPower = "ignore";
+    HandleLidSwitchDocked = "ignore";
+  };
+
+  # The login screen runs its own settings daemon with GNOME's defaults,
+  # which suspend after 15 minutes even on mains power: after a reboot,
+  # before anyone logs in, the machine would drop off the tailnet.
+  programs.dconf.profiles.gdm.databases = [
+    {
+      settings."org/gnome/settings-daemon/plugins/power" = {
+        sleep-inactive-ac-type = "nothing";
+      };
+    }
+  ];
+
   # --- Audio and printing ---
 
   # Sound via PipeWire instead of PulseAudio.

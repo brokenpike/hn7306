@@ -1172,7 +1172,9 @@ intermediate F16 file). Architecture `MistralForCausalLM`. Two fixes were needed
 
 Result: 12.1 GB Q8_0, 16 tokens/s (dense 11B; Q6_K would be ~25% faster).
 The repo also ships `pytorch_model.bin` (22.9 GB, same weights), which
-the converter does not use.
+the converter does not use. The originals (`hf`, 43 GB) and `hf-fixed` were
+deleted after the test; another quantization (e.g. Q6_K) means downloading
+the safetensors again and repeating both fixes.
 
 Test sentence ("The requirement must be traceable to at least one test case,
 and every change has to be approved by the project owner before release."):
@@ -1180,3 +1182,37 @@ TranslateGemma "Kravet må kunne spores tilbake til minst ett testtilfelle, og
 hver endring må godkjennes av prosjektansvarlig før den blir publisert.";
 Gemma 4 E4B "Kravet må spores til minst ett testtilfelle, og enhver endring
 må godkjennes av prosjekteieren før utgivelse."
+
+## Stay awake on mains power, suspend on battery (2026-10-14)
+
+Goal: both laptops answer over the tailnet (Hermes, Open WebUI, llama-swap,
+SSH, phoenix's VMs and their tunnels) while on mains power, and save power
+on battery. A suspended machine is offline, Tailscale included, and
+Wake-on-LAN would need the wired dock plus someone to send the packet, so
+"low power" means awake with the screen off.
+
+Found: phoenix had GNOME's defaults (suspend after 900 s, also on mains
+power) and suspended twice on 2026-10-14 (13:07-13:16, 13:42-14:01), which
+is when SSH to it timed out. hn7306 had "nothing" on mains power, set by
+hand, outside Nix. Closing the lid on mains power suspended both (logind
+default), and the login screen (GDM's own settings daemon) suspends after
+15 minutes on mains power, so after a reboot a machine dropped off the
+tailnet until someone logged in.
+
+Now, shared by both hosts:
+
+- configuration.nix "Power": logind `HandleLidSwitchExternalPower` and
+  `HandleLidSwitchDocked` = ignore, `HandleLidSwitch` = suspend (battery);
+  a dconf database in `programs.dconf.profiles.gdm` with
+  `sleep-inactive-ac-type = nothing` for the login screen.
+- home.nix `dconf.settings`: mains power never suspends, battery suspends
+  after 1800 s, screen off after 600 s (`idle-delay`, a uint32, hence
+  `lib.hm.gvariant.mkUint32`).
+- Power profile: both were on `performance`. `balanced` is set once per
+  machine (`powerprofilesctl set balanced`; power-profiles-daemon keeps
+  it). The models run on the GPU, so the CPU profile barely affects them.
+
+Reading GNOME settings over SSH: `gsettings` finds no schemas outside a
+desktop session on NixOS; `dconf read /org/gnome/...` with
+`DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u)/bus` shows stored
+values (empty = GNOME default).
