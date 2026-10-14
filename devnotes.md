@@ -1216,3 +1216,36 @@ Reading GNOME settings over SSH: `gsettings` finds no schemas outside a
 desktop session on NixOS; `dconf read /org/gnome/...` with
 `DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u)/bus` shows stored
 values (empty = GNOME default).
+
+## libvirtd fails on phoenix: secrets key sealed to a reset TPM (2026-10-14)
+
+**Symptom:** after the rebuild with the 2026-10-13 flake update, phoenix had
+a failed `libvirtd.service`:
+
+    TPM key integrity check failed. Key most likely does not belong to this TPM.
+    Failed to set up credentials: Object is remote
+
+**Cause:** libvirt's unit loads `/var/lib/libvirt/secrets/secrets-encryption-key`
+with `LoadCredentialEncrypted`, and that key is sealed to the TPM. It was
+created on 2026-03-11 (when the host was still called `framework`). Later a
+BIOS upgrade on phoenix went wrong and needed the battery removed to
+recover, which reset the TPM, so the old key can no longer be decrypted.
+It went unnoticed for months because libvirtd had not been started since
+2026-03-25; the libvirt upgrade in the flake update started it.
+`virt-secret-init-encryption.service`, which creates the key, skips itself
+while the old file exists ("start condition unmet").
+
+**Fix:** move the key aside and let a new one be created for the current TPM:
+
+    sudo mv /var/lib/libvirt/secrets/secrets-encryption-key \
+            /var/lib/libvirt/secrets/secrets-encryption-key.old-tpm
+    sudo systemctl start virt-secret-init-encryption libvirtd
+
+Nothing was lost: the folder held only the key, no stored libvirt secrets.
+Only the system libvirt (`qemu:///system`, virt-manager) was affected;
+quickemu runs QEMU directly and GNOME Boxes uses the user session.
+
+**Expect it again** on either laptop after anything that resets the TPM
+(firmware update gone wrong, TPM cleared in the BIOS, battery or CMOS
+removed). Other TPM-sealed things would fail the same way, e.g. a
+TPM-unlocked LUKS volume or other `systemd-creds` secrets.
