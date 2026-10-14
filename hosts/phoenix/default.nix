@@ -24,6 +24,12 @@
     # At medium it spent 477 tokens thinking about a haiku; at about 13
     # tokens/s that is most of every agent step.
     reasoningEffort = "low";
+
+    # Other pulled models OpenCode can switch to (`ollama list`). OpenCode
+    # only offers models declared here; switching unloads gpt-oss.
+    extraModels = [
+      "qwen2.5-coder:7b"
+    ];
   };
 
   # Keyboard layout for Phoenix (US)
