@@ -16,6 +16,26 @@ let
     ]
     ++ llm.extraModels
   );
+
+  # Speech recognition on the GPU. rocmSupport is on globally (strix-halo.nix
+  # on hn7306), so pick Vulkan explicitly, as llama-swap.nix does; this build
+  # comes from the binary cache. Models: /scratch/models/whisper on hn7306.
+  whisperVulkan = pkgs.whisper-cpp.override {
+    rocmSupport = false;
+    vulkanSupport = true;
+  };
+
+  # Subtitle translation through the host's LLM server (scripts/). Its
+  # defaults are this host's local.llm server and model.
+  srtTranslate = pkgs.writers.writePython3Bin "srt-translate" { flakeIgnore = [ "E501" ]; } (
+    builtins.replaceStrings
+      [ "@BASE_URL@" "@MODEL@" ]
+      [
+        llm.baseURL
+        (if llm.model != null then llm.model else "")
+      ]
+      (builtins.readFile ./scripts/srt-translate.py)
+  );
 in
 {
   home.username = "scott";
@@ -31,6 +51,7 @@ in
     deadnix
     direnv
     evince
+    ffmpeg # audio for whisper-cli: -vn -ac 1 -ar 16000
     fish
     gh
     git-credential-manager
@@ -47,11 +68,13 @@ in
     obsidian
     proton-pass
     protonmail-desktop # Proton Mail + Calendar
+    srtTranslate # let binding above
     tilix
     tmux
     trayscale # Tailscale tray app; needs --operator=scott (configuration.nix)
     uv
     vscode
+    whisperVulkan # let binding above; whisper-cli
     wl-clipboard # helix system clipboard (space + y yanks to it)
     zeroad
   ];

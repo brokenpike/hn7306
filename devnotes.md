@@ -1299,3 +1299,41 @@ Norwegian subtitle work and rejected: it is an encoder-decoder model
 llama-swap and Open WebUI), it translates strictly sentence by sentence
 without context, it is weaker on colloquial dialogue, and its license
 (CC-BY-NC 4.0) forbids commercial use. The LLMs above cover ja -> nb.
+
+## Japanese audio -> Norwegian subtitles (2026-10-15)
+
+Two steps: speech recognition to a Japanese .srt, then translation.
+
+**1. Speech:** `whisperVulkan` in home.nix (`pkgs.whisper-cpp` with
+`rocmSupport = false; vulkanSupport = true`, from the binary cache; the
+global rocmSupport would otherwise add ROCm). Models in
+/scratch/models/whisper: `ggml-large-v3.bin` (3.1 GB, best for Japanese;
+large-v3-turbo is faster but weaker) and the Silero VAD
+`ggml-silero-v6.2.0.bin`, which keeps Whisper from inventing text during
+silence or music. Whisper itself only translates into English.
+
+    ffmpeg -i video.mkv -vn -ac 1 -ar 16000 audio.wav
+    whisper-cli -m /scratch/models/whisper/ggml-large-v3.bin -l ja \
+      --vad --vad-model /scratch/models/whisper/ggml-silero-v6.2.0.bin \
+      -osrt -of video.ja -f audio.wav
+
+**2. Translation:** `srt-translate` (scripts/srt-translate.py, standard
+library only, built with `pkgs.writers.writePython3Bin`; the server URL and
+default model are substituted from `local.llm` at build time). It sends
+40 subtitles per request with the previous 6 as context, takes numbers and
+timestamps from the input only, retries an incomplete chunk in halves, and
+wraps lines over 42 characters into two. `--via-english` goes source ->
+English with `--model`, then English -> target line by line with
+NorMistral (system message = target language).
+
+    srt-translate video.ja.srt                 # -> video.nb.srt, Qwen3.6 direct
+    srt-translate video.ja.srt --via-english   # Qwen3.6 -> English -> NorMistral
+
+**Test (5 lines of dialogue, 2026-10-15):** direct Qwen3.6 got 昨日の会議
+wrong ("dagens møte" instead of yesterday's) and phrased one line clumsily;
+via English was correct and more natural ("møtematerialet fra i går",
+"Jeg tar deg igjen snart", "i morges"), 9 s. Single sentences ja -> nb:
+EuroLLM-9B natural on dialogue ("Vent litt, jeg er ikke klar enda. Gå du
+først.") but one gender slip ("Denne kravet"); Seed-X-PPO weak in Norwegian
+("Venteilen en lite", Danish-sounding "frigives"), maybe the unofficial
+quantization ByteDance warns about. Default recommendation: --via-english.
