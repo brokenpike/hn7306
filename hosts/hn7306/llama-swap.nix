@@ -54,6 +54,19 @@ let
     {%- endif -%}
   '';
 
+  # Seed-X has no chat template and is trained on bare prompts ending in a
+  # target-language tag ("…:\n<text> <nb>"); multi-turn input is discouraged.
+  # This passes only the last user message, unchanged.
+  seedxTemplate = pkgs.writeText "seed-x.jinja" ''
+    {%- set ns = namespace(text="") -%}
+    {%- for message in messages -%}
+    {%- if message['role'] == 'user' -%}
+    {%- set ns.text = message['content'] -%}
+    {%- endif -%}
+    {%- endfor -%}
+    {{ bos_token }}{{ ns.text | trim }}
+  '';
+
   # Translation models: one document per request, no long agent context.
   translateCtx = "16384";
 in
@@ -154,6 +167,33 @@ in
           ];
           ttl = 1800;
         };
+
+        # Multilingual chat model trained on the EU languages plus Norwegian
+        # (utter-project, December 2025 release). Its own ChatML template.
+        "eurollm-9b" = {
+          cmd = server vulkan [
+            "--model ${models}/eurollm-9b/EuroLLM-9B-Instruct-2512.Q8_0.gguf"
+            "--ctx-size ${translateCtx}"
+            "--parallel 1"
+            "--temp 0"
+          ];
+          ttl = 1800;
+        };
+
+        # ByteDance's translation model (28 languages, nb and no included),
+        # the PPO variant they recommend. Prompt: "Translate the following
+        # English sentence into Norwegian Bokmal:\n<text> <nb>"; the tag at
+        # the end is required.
+        "seed-x-ppo-7b" = {
+          cmd = server vulkan [
+            "--model ${models}/seed-x-ppo-7b/Seed-X-PPO-7B.Q8_0.gguf"
+            "--chat-template-file ${seedxTemplate}"
+            "--ctx-size ${translateCtx}"
+            "--parallel 1"
+            "--temp 0"
+          ];
+          ttl = 1800;
+        };
       };
 
       # The two Qwen models stay loaded together (about 65 GiB with context).
@@ -179,6 +219,8 @@ in
           "normistral-11b-translate"
           "gemma-4-e4b"
           "translategemma-4b"
+          "eurollm-9b"
+          "seed-x-ppo-7b"
         ];
       };
     };

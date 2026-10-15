@@ -1273,3 +1273,29 @@ template service runs `powerprofilesctl set %i`; udev only starts it
 (`systemctl start --no-block`) instead of calling the daemon itself. Booting
 on battery fires no change event; power-profiles-daemon then keeps the last
 profile. Check with `powerprofilesctl get` after unplugging and plugging in.
+
+**Two more translation models (2026-10-15)**, also in group `translate`, Q8_0:
+
+| Model ID | Source | Notes |
+|---|---|---|
+| `eurollm-9b` | mradermacher/EuroLLM-9B-Instruct-2512-GGUF (utter-project, Dec 2025 release; the original 2024 EuroLLM-9B-Instruct is older) | Chat model trained on the EU languages plus Norwegian; its own ChatML template. 9.7 GB. |
+| `seed-x-ppo-7b` | mradermacher/Seed-X-PPO-7B-GGUF (ByteDance; PPO is the variant they recommend over Instruct) | Translation only, 28 languages incl. `nb` and `no`. 7.9 GB. |
+
+**Seed-X has no chat template** and is trained on bare prompts that end in
+a target-language tag, which is required:
+
+    Translate the following English sentence into Norwegian Bokmal:
+    <text> <nb>
+
+ByteDance advises against multi-turn input and against unofficial
+quantizations (Q8_0 is as close to the original as GGUF gets).
+llama-swap.nix passes a template (`seedxTemplate`) that sends only the last
+user message, unchanged, after the BOS token, so it works from Open WebUI
+as long as the prompt itself has that shape.
+
+**Not NLLB-200 (decided 2026-10-15).** Considered for the Japanese ->
+Norwegian subtitle work and rejected: it is an encoder-decoder model
+(M2M100) that llama.cpp cannot run (Python/CTranslate2 only, outside
+llama-swap and Open WebUI), it translates strictly sentence by sentence
+without context, it is weaker on colloquial dialogue, and its license
+(CC-BY-NC 4.0) forbids commercial use. The LLMs above cover ja -> nb.
