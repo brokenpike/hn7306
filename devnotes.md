@@ -1337,3 +1337,29 @@ EuroLLM-9B natural on dialogue ("Vent litt, jeg er ikke klar enda. Gå du
 først.") but one gender slip ("Denne kravet"); Seed-X-PPO weak in Norwegian
 ("Venteilen en lite", Danish-sounding "frigives"), maybe the unofficial
 quantization ByteDance warns about. Default recommendation: --via-english.
+
+## Flake update 2026-10-19
+
+nixpkgs 2026-10-11 -> 2026-10-15, hermes-agent 6e7b83a -> 5fc490e,
+home-manager, nixpkgs-stable, Determinate. Restore point: tag
+`backup/pre-update-2026-10-19`. Done after first switching to the then
+current config, so the update was the only change in its switch.
+
+- **Kernel 7.2.9 -> 7.2.10** (reboot), **Mesa 26.2.4 -> 26.2.5**, ROCm clr
+  7.2.3 -> 7.2.4, Ollama 0.40.3; llama.cpp 0.6.0 and whisper-cpp 1.9.5
+  unchanged.
+- **llama-swap 249 -> 262.** No breaking config change (`logToStdout` now
+  also takes a comma list; `both` still valid). The NixOS module now runs
+  `llama-swap -config … -validate` while building
+  (`llama-swap-validated-config.yaml`), so a broken config fails the build
+  instead of the service. Checked before switching: "config is valid: 8
+  model(s)".
+- **Open WebUI 0.11.4 -> 0.12.2**, with database migrations; backed up first
+  (`systemctl stop open-webui`, `cp -a /var/lib/private/open-webui
+  /scratch/backup/open-webui-2026-10-19`). Chats kept.
+- Hermes used a tool after the update.
+
+Benchmark after the switch (Qwen3.6 Q8, llama-bench, tokens/s; 9 Oct in
+brackets): Vulkan pp2048 1205 (1239), tg128 45.9 (45.7), pp@32K 646 (671),
+tg@32K 39.1 (39.4); ROCm 1059 (1104), 41.6 (42.5), 667 (688), 36.5 (37.1).
+Within noise (llama-swap served 13 requests during the run); Vulkan stays.
