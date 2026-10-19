@@ -62,12 +62,14 @@ in
     hunspellDicts.nb-no
     languagetool
     lazygit
+
     libreoffice-stable
     microsoft-edge
     nix-output-monitor
     obsidian
     proton-pass
     protonmail-desktop # Proton Mail + Calendar
+    signal-desktop
     srtTranslate # let binding above
     tilix
     tmux
