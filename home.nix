@@ -157,7 +157,9 @@ in
       };
       credential = {
         helper = "manager";
-        credentialStore = "cache";
+        # "cache" forgot logins after minutes; the GNOME keyring keeps one per
+        # GitHub account (brokenpike and vegtamr-no).
+        credentialStore = "secretservice";
       };
     };
     signing.format = "openpgp";
