@@ -7,9 +7,9 @@
     kernelPackages = pkgs.linuxPackages_latest;
     kernelParams = [
       # GPU-addressable memory cap: 104 GiB, in 4 KiB pages (104 * 262144), as
-      # on hn7306. A ceiling, not a reservation; it only matters once a large
-      # model runs here. This machine shows about 121 GiB to Linux, so it
-      # leaves about 17 GiB for the host.
+      # on hn7306. A ceiling, not a reservation: the Qwen pair uses about
+      # 64 GiB of it. This machine shows about 121 GiB to Linux, so it leaves
+      # about 17 GiB for the host.
       "ttm.pages_limit=27262976"
     ];
   };

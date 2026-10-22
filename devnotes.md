@@ -1404,3 +1404,78 @@ ISO, dual-boot with Windows, one 954 GB NVMe: btrfs subvolumes `@`, `@home`,
   `asus-battery` module, imported on its own because no profile brings it.
   asusd keeps its own limit as state in `/etc/asusd/asusd.ron`; set it to 80
   too (`asusctl battery limit 80`) so the two never fight, as on hn7306.
+
+## gz302 becomes the home LLM server (2026-10-22)
+
+gz302 will do little else, so it serves Hermes, OpenCode and Open WebUI on
+the tailnet. hn7306 keeps its own llama-swap and Hermes for now (two separate
+assistants with separate memories) until the user decides otherwise.
+
+- **The Qwen pair, not one big MoE.** Considered: DeepSeek V4 Flash for
+  everything. Rejected for now: at 2-bit (85 GiB) it leaves room for one 64K
+  slot, so Hermes, OpenCode and Open WebUI would queue; it is several times
+  slower per token than the 3B-active Qwen models, which matters most for the
+  10-20K-token prompts agents send; and nobody has measured its 2-bit quality
+  or speed here. Without VMs on gz302 it can be tried there freely later.
+- **Same files as hn7306** (Qwen3.6 UD-Q8_K_XL + mmproj, Coder UD-Q4_K_XL),
+  so hn7306's benchmarks apply and the files can be copied over the tailnet
+  instead of downloaded. Stored in `/srv/models` (root btrfs; created by
+  tmpfiles, owned by scott, world-readable for llama-swap's DynamicUser).
+- **Loaded at boot, never unloaded:** `hooks.on_startup.preload` (llama-swap
+  262) and no `ttl`. hn7306 unloads after 30 minutes to make room for VMs;
+  gz302 has nothing else to make room for.
+- **Open WebUI** on `https://gz302.heron-pickerel.ts.net:8443` via
+  `tailscale serve`, no guests in the tailnet policy yet.
+
+## gz302 was held at 15 W by Armoury Crate's saved mode (2026-10-22)
+
+**Symptom:** with the Qwen pair loaded (64.5 GB GTT, so on the GPU), gz302
+generates 14 tokens/s on qwen3.6-35b and 24 on qwen3-coder-30b; hn7306 does
+about 45 and 52 with the same files and settings.
+
+**Measured** (`nix run nixpkgs#amdgpu_top -- --gpu_metrics` during a
+request): socket power pinned at 15.0 W, `current_gfx_maxfreq` 600 MHz (range
+600-2900), `current_core_maxfreq` ~1550 MHz (`scaling_max_freq` 3.0 GHz of
+5.19), uclk ~550 MHz, fclk ~650 MHz; `throttle_residency_spl`, `_sppt` and
+`_fppt` counting, no thermal throttling (GPU 42 °C). Generation is
+memory-bound, so the low uclk is what halves the speed.
+
+**Ruled out, one at a time, all still 15 W:**
+- platform profile `balanced` vs `performance` (both `asus-wmi` and
+  `amd-pmf` registered as profile handlers; both followed);
+- the power source: the Dell WD19S dock (USB-C PD, ~90 W), the battery and
+  the ASUS charger alone (it feeds `AC0`, not a USB-C port) all give 15 W;
+- rewriting the asus-armoury limits (`ppt_pl1_spl` 60, `ppt_pl2_sppt` 75,
+  `ppt_pl3_fppt` 86, their defaults) via sysfs;
+- unloading `amd_pmf` (and `amdxdna`, which depends on it), then switching
+  profile and rewriting the asus-armoury limits again;
+- `ryzenadj` 0.19.0 (supports Strix Halo; `--info` cannot read the metrics
+  table without /dev/mem access) setting stapm/slow/fast to 60/75/86 W: it
+  reported success and nothing changed.
+
+The IOMMU is not involved: the GPU's group is already `identity`.
+`amd_iommu=off` (hn7306) was not tried; it cannot explain a power cap.
+
+**Cause and fix:** Armoury Crate (Windows) stores its operating mode in the
+embedded controller, and the mode survives reboots and switching OS. A
+power-saving mode left set in Windows capped the SoC at 15 W below
+everything Linux can set; the asus-armoury values (60/75/86) and the
+platform profile looked normal throughout. Setting **Turbo** in Armoury
+Crate and booting back into NixOS fixed it with no change on the Linux side
+(same BIOS GZ302EA.314, `amd_pmf` loaded, profile `balanced`):
+qwen3.6-35b 40.5 tokens/s, qwen3-coder-30b 69 tokens/s, 45 W socket power,
+gfxclk ~2180 MHz, uclk ~1000 MHz.
+
+**If it comes back** (speed halves, socket power stuck at exactly 15.0 W in
+`amdgpu_top --gpu_metrics` during a request): boot Windows, set Armoury
+Crate to Turbo (or Performance), boot back. Do not chase it in Linux first;
+nothing there reaches this limit. Anything in Windows that switches Armoury
+Crate to Silent, e.g. its own battery rules, can bring it back.
+
+**Profile on the Dell dock (measured after the fix):** keep `balanced`. On
+the WD19S alone (USB-C PD, ~90 W) `balanced` draws ~45 W and gives
+qwen3.6-35b 41.7 / qwen3-coder-30b 66.8 tokens/s generating, Coder 588
+tokens/s reading a 12K prompt (Qwen3.6 892); the battery holds. `performance`
+draws ~81 W: the battery discharges (~77 W) and `prochot` throttling kicks in,
+so generation drops to 33-38 / 51-61 tokens/s; only Coder's prompt reading
+gains (680). Same speeds on the dock as on the ASUS charger in `balanced`.
