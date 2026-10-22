@@ -69,6 +69,7 @@ in
     obsidian
     proton-pass
     protonmail-desktop # Proton Mail + Calendar
+    python3Packages.huggingface-hub # hf download: GGUFs for llama-swap
     signal-desktop
     srtTranslate # let binding above
     tilix
