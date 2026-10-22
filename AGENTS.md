@@ -19,7 +19,9 @@ it is an application; every file is Nix (or docs).
   in `~/vms`, see devnotes.md; libvirt and GNOME Boxes are still installed),
   Tailscale (with Tailscale SSH), zram swap.
 - A second host, `phoenix` (Framework 13 laptop), runs its own Ollama with
-  `gpt-oss:20b`. The user may add the niri window manager, and wants to try
+  `gpt-oss:20b`. A third, `gz302` (ASUS ROG Flow Z13, the same
+  Strix Halo chip, 128 GB), is set up lean: GPU tuning only, no LLM server
+  yet. The user may add the niri window manager, and wants to try
   the nebula mesh VPN.
 
 ## Layout
@@ -38,6 +40,7 @@ hosts/hn7306/strix-halo.nix   GPU memory cap, ROCm, asusd, lact, fwupd
 hosts/hn7306/ollama.nix    Ollama (benchmark reference only), models in /scratch/ollama
 hosts/hn7306/llama-swap.nix   llama.cpp via llama-swap on :8080, GGUFs in /scratch/models
 hosts/hn7306/open-webui.nix   Open WebUI on 127.0.0.1:8081, shared on the tailnet as :8443
+hosts/gz302/                ROG Flow Z13: hardware config, strix-halo.nix (copy of hn7306's)
 scripts/srt-translate.py    subtitle translation via local.llm; built as srt-translate in home.nix
 devnotes.md                decision log: what was decided and why
 ```

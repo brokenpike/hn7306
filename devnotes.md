@@ -1363,3 +1363,44 @@ Benchmark after the switch (Qwen3.6 Q8, llama-bench, tokens/s; 9 Oct in
 brackets): Vulkan pp2048 1205 (1239), tg128 45.9 (45.7), pp@32K 646 (671),
 tg@32K 39.1 (39.4); ROCm 1059 (1104), 41.6 (42.5), 667 (688), 36.5 (37.1).
 Within noise (llama-swap served 13 requests during the run); Vulkan stays.
+
+## Third host: gz302, ASUS ROG Flow Z13 (2026-10-22)
+
+ASUS ROG Flow Z13 GZ302EA: the same Strix Halo chip as hn7306 (Ryzen AI MAX+
+395, Radeon 8060S), 128 GB, of which Linux sees about 121 GiB (hn7306: 124).
+A tablet with a detachable Norwegian keyboard. Installed from the NixOS 26.05
+ISO, dual-boot with Windows, one 954 GB NVMe: btrfs subvolumes `@`, `@home`,
+`@nix`, `@log`, `@swap` on nvme0n1p7, its own ESP (450 MB) at nvme0n1p1.
+
+- **Lean to start:** `hosts/gz302/` has the hardware config, a copy of
+  hn7306's `strix-halo.nix` and nothing else: no llama-swap, Ollama, Open
+  WebUI or Hermes, and `local.llm.model` stays null, so OpenCode is not
+  configured. Add those from `hosts/hn7306/` when models are on disk; there
+  is no /scratch disk, so they would go on the root btrfs.
+- **No nixos-hardware profile** for the GZ302 exists (only the GV302X and
+  GZ301VU Flows). The host imports the generic modules the Flow profiles are
+  built from: `common-cpu-amd`, `common-cpu-amd-pstate`, `common-gpu-amd`,
+  `common-pc-laptop`, `common-pc-ssd`, plus `hardware.sensor.iio` for screen
+  rotation. Not supergfxd: there is no discrete GPU.
+- **Not copied from hn7306:** `amd_iommu=off` (a performance workaround there;
+  try it here only if the same problem appears), the hotspot firewall rule
+  and Tailscale SSH.
+- **The ttm cap is the same 104 GiB.** It is a ceiling, so it does nothing
+  until a model needs it; with 121 GiB visible it leaves about 17 GiB for the
+  host.
+- **Btrfs mount options:** the installer mounted the subvolumes without
+  options, so `/`, `/home` and `/nix` get `compress=zstd:3,noatime` in
+  `hosts/gz302/default.nix`. Existing files stay uncompressed until rewritten.
+  The `@swap` subvolume is mounted but holds no swap file; zram is the swap.
+- **`system.stateVersion` moved to each host.** It was 25.11 in
+  configuration.nix for every host; gz302 was installed with 26.05. hn7306 and
+  phoenix keep 25.11. Checked: both evaluate to the same toplevel derivation
+  as before the move.
+- **Windows boot entry:** Windows has its own ESP (nvme0n1p6), so systemd-boot
+  on nvme0n1p1 does not list it. Use the firmware boot menu, or add an entry
+  later.
+- **Charge limit 80%** (added after the first boot, which showed 100):
+  `hardware.asus.battery.chargeUpto = 80` from nixos-hardware's
+  `asus-battery` module, imported on its own because no profile brings it.
+  asusd keeps its own limit as state in `/etc/asusd/asusd.ron`; set it to 80
+  too (`asusctl battery limit 80`) so the two never fight, as on hn7306.
