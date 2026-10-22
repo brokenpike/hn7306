@@ -172,8 +172,7 @@
     wireguard-tools
   ];
 
-  # Release this system's stateful defaults come from. Do not bump this when
-  # upgrading; see configuration.nix(5) before changing it.
-  system.stateVersion = "25.11";
+  # system.stateVersion is set per host (hosts/<name>/default.nix): each one
+  # keeps the release it was installed with.
 
 }

@@ -91,4 +91,8 @@
     ];
   };
   systemd.tmpfiles.rules = [ "d /mnt/llms 0775 scott users -" ];
+
+  # Release this system's stateful defaults come from. Do not bump this when
+  # upgrading; see configuration.nix(5) before changing it.
+  system.stateVersion = "25.11";
 }
