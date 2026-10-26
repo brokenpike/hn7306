@@ -152,6 +152,13 @@
       "render"
       "video"
     ];
+    # OpenSSH keys, a backup to Tailscale SSH for logins over the LAN or the
+    # USB4 cable (Tailscale SSH answers port 22 on the tailnet and does not
+    # use them). Add phoenix's own key once it has one here.
+    openssh.authorizedKeys.keys = [
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAnRfgI8QRF1wKIhfrGQwSckCDk1JV0eCIbtDw8y3ZFw scott@hn7306"
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIObNPrCbO522G4QPhvGJvIyoIvKfpFObnfJYfQEY++Y4 scott@gz302"
+    ];
   };
 
   # --- Packages ---

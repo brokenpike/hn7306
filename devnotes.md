@@ -1508,3 +1508,21 @@ main nixpkgs stays at fe13242 (2026-10-15), and a temporary input
 `nixpkgs-tailscale` (nixos-unstable, locked at 3ec6363) supplies
 `services.tailscale.package` for all hosts. Remove both after the next full
 update, once posthog/chromadb work again.
+
+## OpenSSH keys as a backup to Tailscale SSH (2026-10-26)
+
+Decision: Tailscale SSH stays the main way in, despite "Tailworm" (its
+flaws need control of a device the policy already lets SSH in). OpenSSH
+keys are the backup for logins over the LAN or the USB4 cable, where
+Tailscale SSH (which answers port 22 on the tailnet only) is not involved.
+Before this, hn7306 and gz302 accepted no keys at all, only the password.
+
+`users.users.scott.openssh.authorizedKeys.keys` in configuration.nix now
+holds the keys of hn7306 and gz302 for every host in this repo (phoenix's
+own block, hn7306's key only, was folded into it). nixoshpe gets the same
+two in nix-hpe. phoenix's own key follows once it is reachable again.
+Password login stays on as the last resort for now.
+
+Test over the LAN (Tailscale SSH not involved), e.g. from hn7306:
+`ssh -o HostKeyAlias=gz302 scott@<gz302 LAN address>`; it must log in
+without asking for a password.
