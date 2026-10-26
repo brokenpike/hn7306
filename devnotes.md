@@ -1479,3 +1479,32 @@ tokens/s reading a 12K prompt (Qwen3.6 892); the battery holds. `performance`
 draws ~81 W: the battery discharges (~77 W) and `prochot` throttling kicks in,
 so generation drops to 33-38 / 51-61 tokens/s; only Coder's prompt reading
 gains (680). Same speeds on the dock as on the ASUS charger in `balanced`.
+
+## Tailscale 1.104.2 ahead of nixpkgs; PHP2Shell; Tailworm (2026-10-26)
+
+Three security items on the same day:
+
+- **TS-2026-013** (Tailscale, 2026-10-21): compromised eMudhra intermediate
+  certificates; fixed in 1.104.2. All hosts had 1.104.1.
+- **PHP2Shell** (CVE-2026-109618/109619, 2026-10-21, CVSS 9.2,
+  unauthenticated RCE, exploited from 2026-10-17): fixed in PHP 8.4.27.
+  Only nixoshpe runs PHP (Nextcloud, 8.4.26); handled in nix-hpe. Follow-up
+  CVE-2026-115560 has no fix yet; workaround `session.upload_progress` off.
+- **"Tailworm"** (2026-10-25): 11 unpatched flaws published by a researcher,
+  mainly Tailscale SSH (port forwarding can end up as root), also in 1.104.2.
+  Needs control of a device the policy lets SSH in, i.e. one of the
+  owner's own devices here. No bulletin or fix yet. Plan: OpenSSH keys for
+  hn7306 and gz302 first, then `--ssh=false` (removing `--ssh` would not
+  reset the setting; phoenix and gz302 had it on by hand).
+
+**Why Tailscale comes from a second nixpkgs:** `nix flake update` to
+nixpkgs 3ec6363 (2026-10-23) failed to evaluate: python `posthog` is marked
+broken (`lib.versionAtLeast mcp.version "2"`), `chromadb` needs it and Open
+WebUI needs chromadb; master was the same. Taking Open WebUI from the old
+nixpkgs instead evaluated, but the update would also bring kernel 7.3,
+compiled locally (the PX13 profile patches it again), plus onnxruntime:
+hours of building and a kernel jump in the middle of a security fix. So the
+main nixpkgs stays at fe13242 (2026-10-15), and a temporary input
+`nixpkgs-tailscale` (nixos-unstable, locked at 3ec6363) supplies
+`services.tailscale.package` for all hosts. Remove both after the next full
+update, once posthog/chromadb work again.

@@ -45,6 +45,10 @@
       "--exit-node-allow-lan-access"
       "--operator=scott"
     ];
+    # TEMPORARY, see the nixpkgs-tailscale input in flake.nix: 1.104.2 fixes
+    # TS-2026-013. Tailscale is a self-contained Go program, so taking it from
+    # a newer nixpkgs than the rest of the system is safe.
+    package = inputs.nixpkgs-tailscale.legacyPackages.${pkgs.stdenv.hostPlatform.system}.tailscale;
   };
   services.openssh.enable = true;
 
