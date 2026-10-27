@@ -38,6 +38,11 @@ in
   # (100 in /etc/asusd/asusd.ron), but it is state, not config.
   hardware.asus.battery.chargeUpto = 80;
 
+  # Tailscale SSH, as on hn7306: it was switched on by hand, this keeps it
+  # across a reset of Tailscale's settings. OpenSSH keys (configuration.nix)
+  # are the backup over the LAN.
+  services.tailscale.extraSetFlags = [ "--ssh" ];
+
   # The home LLM server on the tailnet. The names are llama-swap model IDs,
   # defined in llama-swap.nix; both stay loaded, so switching between Hermes
   # and OpenCode reloads nothing.

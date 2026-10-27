@@ -32,9 +32,10 @@ in
       # Hermes' model, so a chat shares its slots.
       DEFAULT_MODELS = llm.model;
 
-      # Others sign up themselves and wait as "pending" until the admin (the
-      # first account created) approves them.
-      ENABLE_SIGNUP = "True";
+      # The admin account exists (created 2026-10-26); Open WebUI then turned
+      # sign-up off itself. Further accounts: Admin Panel, Users. This only
+      # seeds a fresh install; the database value wins afterwards.
+      ENABLE_SIGNUP = "False";
       DEFAULT_USER_ROLE = "pending";
     };
   };

@@ -1526,3 +1526,13 @@ Password login stays on as the last resort for now.
 Test over the LAN (Tailscale SSH not involved), e.g. from hn7306:
 `ssh -o HostKeyAlias=gz302 scott@<gz302 LAN address>`; it must log in
 without asking for a password.
+
+**gz302 follow-up (2026-10-26):** Open WebUI was still in onboarding (no
+admin account; the first visitor would have become admin). The account was
+created, Open WebUI turned sign-up off itself, and `ENABLE_SIGNUP` in
+hosts/gz302/open-webui.nix now says "False" to match (it only seeds a fresh
+install). Tailscale SSH, on by hand until now, is declared in
+hosts/gz302/default.nix (`--ssh`), as on hn7306. Still open: phoenix and
+the Visure VMs (Vivia) pointing at gz302 instead of hn7306, guests moved to
+gz302, translation models and Whisper there, and backups of Hermes and Open
+WebUI state.
