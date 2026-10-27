@@ -50,6 +50,8 @@ in
     baseURL = "http://127.0.0.1:8080/v1";
     model = "qwen3.6-35b";
     opencode.model = "qwen3-coder-30b";
+    # Runs alone; switching to it unloads the pair (llama-swap.nix).
+    extraModels = [ "qwen3.8-flash-next" ];
   };
 
   # A tablet: the accelerometer lets GNOME rotate the screen.

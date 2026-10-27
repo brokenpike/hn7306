@@ -88,6 +88,24 @@ in
             "--repeat-penalty 1.05"
           ];
         };
+
+        # The strongest open model that fits (2026-10-27): 179B, 6B active.
+        # 87 GiB of weights, so it runs alone: loading it unloads the Qwen pair,
+        # and the next Hermes or OpenCode request swaps the pair back. Not
+        # preloaded. Sampling is Qwen's thinking-mode recommendation.
+        "qwen3.8-flash-next" = {
+          cmd = server vulkan [
+            "--model ${models}/Qwen3.8-Flash-Next-GGUF/UD-IQ4_XS/Qwen3.8-Flash-Next-UD-IQ4_XS-00001-of-00003.gguf"
+            "--ctx-size ${toString config.local.llm.contextLength}"
+            "--parallel 1"
+            "--temp 1.0"
+            "--top-p 0.95"
+            "--top-k 20"
+            "--min-p 0.0"
+            "--repeat-penalty 1.0"
+          ];
+          ttl = 1800;
+        };
       };
 
       # Both stay loaded together, about 64 GiB with context.
