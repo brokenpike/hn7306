@@ -16,6 +16,18 @@ let
     ]
     ++ llm.extraModels
   );
+  opencodeRemotes = lib.mapAttrs (host: remote: {
+    npm = "@ai-sdk/openai-compatible";
+    name = host;
+    options.baseURL = remote.baseURL;
+    models = lib.genAttrs remote.models (m: {
+      name = "${m} (${host})";
+      limit = {
+        context = remote.contextLength;
+        output = 16384;
+      };
+    });
+  }) llm.opencode.remotes;
 
   # Speech recognition on the GPU. rocmSupport is on globally (strix-halo.nix
   # on hn7306), so pick Vulkan explicitly, as llama-swap.nix does; this build
@@ -178,6 +190,10 @@ in
   # host without a local model gets no OpenCode.
   programs.opencode = lib.mkIf (llm.model != null) {
     enable = true;
+    # TEMPORARY, see the nixpkgs-tailscale input in flake.nix: OpenCode 2 is
+    # not in the main nixpkgs yet. It reads the V1 settings below and converts
+    # them itself.
+    package = inputs.nixpkgs-tailscale.legacyPackages.${pkgs.stdenv.hostPlatform.system}.opencode;
     settings = {
       "$schema" = "https://opencode.ai/config.json";
 
@@ -188,28 +204,34 @@ in
 
       autoupdate = false; # the version comes from nixpkgs
       share = "disabled"; # never upload sessions to opencode.ai
+      # Only the tailnet's own servers. OpenCode 2 otherwise also lists free
+      # cloud models (provider "opencode"), which would send the code out.
+      enabled_providers = [ "local" ] ++ lib.attrNames llm.opencode.remotes;
 
-      provider.local = {
-        npm = "@ai-sdk/openai-compatible";
-        name = "Local";
-        options.baseURL = llm.baseURL;
-        # OpenCode only offers the models declared here. The context equals
-        # what the server gives each slot, so it matches Hermes.
-        models = lib.genAttrs opencodeModels (
-          m:
-          {
-            name = "${m} (local)";
-            limit = {
-              context = llm.contextLength;
-              output = 16384;
-            };
-          }
-          # Set in llm.nix, and only on the default model: the extra models may
-          # not accept reasoning levels.
-          // lib.optionalAttrs (m == llm.model && llm.reasoningEffort != null) {
-            options.reasoningEffort = llm.reasoningEffort;
-          }
-        );
+      # Other hosts' servers (local.llm.opencode.remotes), one provider each.
+      provider = opencodeRemotes // {
+        local = {
+          npm = "@ai-sdk/openai-compatible";
+          name = "Local";
+          options.baseURL = llm.baseURL;
+          # OpenCode only offers the models declared here. The context equals
+          # what the server gives each slot, so it matches Hermes.
+          models = lib.genAttrs opencodeModels (
+            m:
+            {
+              name = "${m} (local)";
+              limit = {
+                context = llm.contextLength;
+                output = 16384;
+              };
+            }
+            # Set in llm.nix, and only on the default model: the extra models may
+            # not accept reasoning levels.
+            // lib.optionalAttrs (m == llm.model && llm.reasoningEffort != null) {
+              options.reasoningEffort = llm.reasoningEffort;
+            }
+          );
+        };
       };
 
       # Reading files is allowed by default (except .env). Rules are matched

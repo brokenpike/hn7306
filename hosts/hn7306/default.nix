@@ -64,6 +64,16 @@
     # Other llama-swap models OpenCode can be switched to. deepseek-v4-flash
     # unloads both Qwen models and does not fit next to a VM.
     extraModels = [ "deepseek-v4-flash" ];
+    # gz302's llama-swap over the tailnet (tailscale serve), with the bigger
+    # model hn7306 cannot run next to a VM. Names from hosts/gz302/llama-swap.nix.
+    opencode.remotes.gz302 = {
+      baseURL = "https://gz302.heron-pickerel.ts.net/v1";
+      models = [
+        "qwen3.8-flash-next"
+        "qwen3.6-35b"
+        "qwen3-coder-30b"
+      ];
+    };
   };
 
   # Btrfs data disk

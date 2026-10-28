@@ -76,5 +76,38 @@
         models declared in its config. Hermes needs no list.
       '';
     };
+
+    opencode.remotes = lib.mkOption {
+      type = lib.types.attrsOf (
+        lib.types.submodule {
+          options = {
+            baseURL = lib.mkOption {
+              type = lib.types.str;
+              description = "OpenAI-compatible endpoint of the other server.";
+            };
+            models = lib.mkOption {
+              type = lib.types.listOf lib.types.str;
+              description = "Model names that server knows, to offer in OpenCode.";
+            };
+            contextLength = lib.mkOption {
+              type = lib.types.ints.positive;
+              default = 65536;
+              description = "Context per request on that server (its own local.llm.contextLength).";
+            };
+          };
+        }
+      );
+      default = { };
+      example = {
+        gz302 = {
+          baseURL = "https://gz302.heron-pickerel.ts.net/v1";
+          models = [ "qwen3.8-flash-next" ];
+        };
+      };
+      description = ''
+        LLM servers on other hosts that OpenCode offers as extra providers,
+        named after the attribute. Hermes keeps using `baseURL` only.
+      '';
+    };
   };
 }

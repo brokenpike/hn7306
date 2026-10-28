@@ -1549,3 +1549,21 @@ low GTT is expected for this model and not a CPU fallback. With it loaded,
 gz302 used 94 of 121 GiB RAM: room for more context, not for the Qwen pair
 next to it. gz302 also has a 4 GiB VRAM carve-out in firmware; hn7306 has
 none.
+
+**OpenCode 2 applied (2026-10-28):** nixpkgs now packages it (2.0.32 merged
+2026-10-19, 2.1.4 on unstable), so the deferral above is over. The main
+nixpkgs still cannot move (posthog), so `programs.opencode.package` comes
+from the temporary nixpkgs-tailscale input (3ec6363: OpenCode 2.1.1, cached)
+and goes back to the main nixpkgs with the next full update. The settings
+keep their V1 field names: `opencode debug config` of 2.1.1 converted the
+generated file of hn7306 without warnings, permissions in the same order.
+Switching home.nix to the native V2 fields (listed above) can wait until
+V1 support is dropped.
+
+**OpenCode: gz302 as a second provider (2026-10-28):** new option
+`local.llm.opencode.remotes` (llm.nix); each entry becomes one OpenCode
+provider. hn7306 lists gz302's llama-swap at
+https://gz302.heron-pickerel.ts.net/v1 (tailscale serve), so OpenCode there
+can use Qwen3.8-Flash-Next, which hn7306 cannot run next to a VM. Hermes
+still uses only `baseURL`. Picking a gz302 model swaps models on gz302 like
+any other client.

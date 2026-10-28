@@ -22,8 +22,9 @@
     hermes-agent.url = "github:NousResearch/hermes-agent";
     # TEMPORARY: Tailscale 1.104.2 (security bulletin TS-2026-013) ahead of the
     # main nixpkgs, which cannot move yet: on nixpkgs from 2026-10-23 Open
-    # WebUI fails to evaluate (python posthog broken by mcp 2). Remove this
-    # input and its use in configuration.nix after the next full update.
+    # WebUI fails to evaluate (python posthog broken by mcp 2). OpenCode 2
+    # comes from here too. Remove this input and its uses in configuration.nix
+    # and home.nix after the next full update.
     nixpkgs-tailscale.url = "github:NixOS/nixpkgs/nixos-unstable";
   };
 

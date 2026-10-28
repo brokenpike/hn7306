@@ -67,9 +67,9 @@ devnotes.md                decision log: what was decided and why
 
 Hermes and OpenCode share one server, one context size and, by default, one
 model. They are set once per host in `hosts/<name>/default.nix` under
-`local.llm` (`baseURL`, `model`, `opencode.model`, `contextLength`,
-`extraModels`; options defined in `llm.nix`). `hermes.nix`, `home.nix` and the
-host's server module (`llama-swap.nix` or `ollama.nix`) read them. Never
+`local.llm` (`baseURL`, `model`, `opencode.model`, `opencode.remotes`,
+`contextLength`, `extraModels`; options defined in `llm.nix`). `hermes.nix`,
+`home.nix` and the host's server module (`llama-swap.nix` or `ollama.nix`) read them. Never
 hard-code a URL, model name or context size in the other files.
 
 - On hn7306 the names are llama-swap model IDs (`qwen3.6-35b`), defined in
