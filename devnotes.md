@@ -1536,3 +1536,16 @@ hosts/gz302/default.nix (`--ssh`), as on hn7306. Still open: phoenix and
 the Visure VMs (Vivia) pointing at gz302 instead of hn7306, guests moved to
 gz302, translation models and Whisper there, and backups of Hermes and Open
 WebUI state.
+
+**Qwen3.8-Flash-Next on gz302 (2026-10-27):** the strongest open model that
+fits under the 104 GiB cap (179B incl. a 51B n-gram embedding, 6B active);
+Kimi K3, GLM-5.2, DeepSeek V4.1 Flash and MiMo Pro need 200+ GiB even at
+1-2 bit. UD-IQ4_XS (87 GiB, three split files) chosen over UD-Q3_K_XL: the
+3-bit quality loss costs more than the 3 GiB it saves. First run, 64K
+context, Vulkan: 23.6 tokens/s generation (Qwen3.6 Q8: 46). Only 60 GiB
+shows in GTT; the other 27 GiB is the n-gram embedding, which llama.cpp keeps
+on the CPU like every input embedding (anonymous memory of llama-server), so
+low GTT is expected for this model and not a CPU fallback. With it loaded,
+gz302 used 94 of 121 GiB RAM: room for more context, not for the Qwen pair
+next to it. gz302 also has a 4 GiB VRAM carve-out in firmware; hn7306 has
+none.
