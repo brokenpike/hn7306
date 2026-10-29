@@ -74,6 +74,8 @@ in
     hunspellDicts.nb-no
     languagetool
     lazygit
+    rnote
+    tesseract
 
     libreoffice-stable
     microsoft-edge
@@ -238,8 +240,8 @@ in
       # top to bottom and the last match wins.
       permission = {
         edit = "ask";
-        webfetch = "ask";
-        websearch = "ask";
+        webfetch = "allow";
+        websearch = "allow";
         bash = {
           "*" = "ask";
           "git diff" = "allow";
