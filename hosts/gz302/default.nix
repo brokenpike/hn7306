@@ -22,6 +22,7 @@ in
     ./llama-swap.nix
     ./open-webui.nix
     ../../hermes.nix
+    ../../vm.nix
   ];
 
   # Must match the nixosConfigurations attribute name in flake.nix.

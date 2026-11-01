@@ -7,6 +7,7 @@
     ./hardware-configuration.nix
     ./ollama.nix
     ../../hermes.nix
+    ../../vm.nix
   ];
 
   networking.hostName = "phoenix";

@@ -67,6 +67,7 @@
         hn7306 = mkHost ./hosts/hn7306;
         phoenix = mkHost ./hosts/phoenix;
         gz302 = mkHost ./hosts/gz302;
+        latitude5400 = mkHost ./hosts/latitude5400;
       };
     };
 }

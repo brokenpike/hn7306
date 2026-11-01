@@ -31,6 +31,7 @@ flake.nix                  inputs and wiring only
 configuration.nix          shared base for every host, grouped by topic
 gnome.nix                  GNOME session (GDM stays in configuration.nix)
 vm.nix                     quickemu, libvirt, Boxes, SPICE, Windows guest tools, KVM MSRs
+                            (opt-in per host, like hermes.nix; not every host imports it)
 llm.nix                    options local.llm.*: server URL, models and context for Hermes and OpenCode
 hermes.nix                 Hermes Agent service (optional module)
 home.nix                   Home Manager config for scott (includes OpenCode)
@@ -41,6 +42,7 @@ hosts/hn7306/ollama.nix    Ollama (benchmark reference only), models in /scratch
 hosts/hn7306/llama-swap.nix   llama.cpp via llama-swap on :8080, GGUFs in /scratch/models
 hosts/hn7306/open-webui.nix   Open WebUI on 127.0.0.1:8081, shared on the tailnet as :8443
 hosts/gz302/                ROG Flow Z13 home LLM server: strix-halo.nix, llama-swap.nix, open-webui.nix
+hosts/latitude5400/         thin client: no LLM/VM tooling, SSH + remmina into hn7306/gz302
 scripts/srt-translate.py    subtitle translation via local.llm; built as srt-translate in home.nix
 devnotes.md                decision log: what was decided and why
 ```

@@ -1567,3 +1567,49 @@ https://gz302.heron-pickerel.ts.net/v1 (tailscale serve), so OpenCode there
 can use Qwen3.8-Flash-Next, which hn7306 cannot run next to a VM. Hermes
 still uses only `baseURL`. Picking a gz302 model swaps models on gz302 like
 any other client.
+
+## Fourth host: latitude5400, a thin client (2026-11-01)
+
+**Hardware.** Dell Latitude 5400, Intel Core i5-8350U (4C/8T), 16 GiB RAM, one
+238 GB NVMe disk, no discrete GPU. Already had NixOS 26.05 installed by hand
+(the installer's own btrfs layout: subvolumes `root`, `home`, `nix`, `persist`,
+`log` on one partition, no swap partition), with a stock installer
+`configuration.nix`/`hardware-configuration.nix` not yet wired into this flake.
+`hardware.cpu.intel.updateMicrocode` and `kvm-intel` come from the
+generated `hardware-configuration.nix`, copied in unedited.
+
+**Role.** A low-RAM, low-storage thin client, not another LLM host: no
+Ollama/llama-swap, no Hermes, `local.llm` left at its defaults (null model, so
+`home.nix`'s `programs.opencode` stays off, matching the documented "host
+without a local server" case). Its job is SSH plus a GNOME Remote
+Desktop/RDP client (`remmina`, added in `hosts/latitude5400/default.nix`) into
+hn7306 or gz302 for anything that needs real compute. Note: hn7306/gz302 do
+not yet run an RDP/VNC *server* (gnome.nix only enables the GNOME session, not
+`services.gnome.gnome-remote-desktop` or GDM remote login) — that is a
+separate, not-yet-done piece if remmina is to have something to connect to.
+
+**`vm.nix` made opt-in per host.** It was imported unconditionally by
+`configuration.nix` (libvirt, quickemu, Windows guest tooling), which would
+have put Windows-VM tooling on a 238 GB thin client for no reason. Moved its
+import out of `configuration.nix` and into each of `hosts/hn7306/default.nix`,
+`hosts/phoenix/default.nix` and `hosts/gz302/default.nix` instead (same
+pattern `hermes.nix` already used: opt-in per host, not shared). latitude5400
+does not import it. Verified with `nix eval` that `virtualisation.libvirtd.enable`
+and `programs.virt-manager.enable` are still `true` on the three existing
+hosts and `false` on latitude5400; the toplevel `.drvPath` changed for all
+three, but only because of the SSH key addition below, confirmed by checking
+the vm.nix-controlled options directly rather than the whole drvPath.
+
+**SSH key.** Generated a fresh ed25519 keypair on the machine
+(`~/.ssh/id_ed25519`) and added its public half to the shared
+`users.users.scott.openssh.authorizedKeys.keys` list in `configuration.nix`,
+matching hn7306's and gz302's existing entries (mutual SSH trust between all
+machines, backing up Tailscale SSH). `services.tailscale.extraSetFlags = [
+"--ssh" ]` was added in `hosts/latitude5400/default.nix` for the same reason
+hn7306 and gz302 have it.
+
+**Not done, left for later:** `home.nix`'s large shared package list
+(LibreOffice, VS Code, Signal, Obsidian, Microsoft Edge, OBS Studio, 0 A.D.,
+etc.) is still applied to latitude5400 unmodified; trimming it for a
+low-storage host was explicitly deferred. An RDP/VNC *server* for hn7306/gz302
+also still needs setting up for remmina to have something to connect to.

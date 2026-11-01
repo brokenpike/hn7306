@@ -13,7 +13,6 @@
   imports = [
     ./gnome.nix
     ./llm.nix
-    ./vm.nix
   ];
 
   # --- Boot and memory ---
@@ -158,6 +157,7 @@
     openssh.authorizedKeys.keys = [
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAnRfgI8QRF1wKIhfrGQwSckCDk1JV0eCIbtDw8y3ZFw scott@hn7306"
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIObNPrCbO522G4QPhvGJvIyoIvKfpFObnfJYfQEY++Y4 scott@gz302"
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFjUF4ffAWagJaYcjwnpOLO25i+B1Mv4I3fK4pZXqy2c scott@latitude5400"
     ];
   };
 
