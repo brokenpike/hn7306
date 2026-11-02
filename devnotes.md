@@ -1613,3 +1613,24 @@ hn7306 and gz302 have it.
 etc.) is still applied to latitude5400 unmodified; trimming it for a
 low-storage host was explicitly deferred. An RDP/VNC *server* for hn7306/gz302
 also still needs setting up for remmina to have something to connect to.
+
+## Full update with Open WebUI pinned (2026-11-02)
+
+posthog has been marked broken since 2026-10-19 (it does not support mcp 2;
+fix in NixOS/nixpkgs#578265, still open). Pinning posthog alone into a newer
+nixpkgs would mix Python libraries built against different interpreters and
+mcp versions, so the pin is the whole app instead: input `nixpkgs-openwebui`
+is locked to fe13242, the last main nixpkgs where Open WebUI evaluated, and
+both hosts' open-webui.nix take the package from it. It is imported with
+`config.nixpkgs.config` (unfree, rocmSupport); without that, the package
+differed from the running one. With it, the store path is identical
+(open-webui-0.12.2, 8c1ip7lw), so Open WebUI does not change at all.
+
+Everything else moved with `nix flake update` (tag
+backup/pre-update-2026-11-02 marks the commit before): nixpkgs 0bb2eed
+(2026-11-01), kernel 7.3.1 from the cache, Tailscale 1.104.4, OpenCode
+2.2.1, Home Manager, and hermes-agent from July to 2026-10-22 (its Python
+environment is many small wheel builds). The nixpkgs-tailscale input and its
+two `package =` lines are gone. Remove nixpkgs-openwebui once posthog is
+fixed; check with
+`nix eval --json github:NixOS/nixpkgs/nixos-unstable#legacyPackages.x86_64-linux.python3Packages.posthog.meta.broken`.

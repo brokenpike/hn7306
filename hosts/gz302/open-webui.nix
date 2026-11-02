@@ -1,13 +1,26 @@
 # Open WebUI: a chat page in front of llama-swap. Listens on localhost only;
 # tailscale serve publishes it as https://gz302.heron-pickerel.ts.net:8443.
 # Unlike hn7306's, no tailnet guests are allowed to reach it yet.
-{ config, ... }:
+{
+  config,
+  inputs,
+  pkgs,
+  ...
+}:
 
 let
   llm = config.local.llm;
 in
 {
   services.open-webui = {
+    # TEMPORARY, see the nixpkgs-openwebui input in flake.nix. Imported with
+    # this system's nixpkgs settings (unfree, ROCm), so the package is the
+    # same one the main nixpkgs built before posthog broke.
+    package =
+      (import inputs.nixpkgs-openwebui {
+        inherit (pkgs.stdenv.hostPlatform) system;
+        config = config.nixpkgs.config;
+      }).open-webui;
     enable = true;
     host = "127.0.0.1";
     # 8080 is llama-swap.

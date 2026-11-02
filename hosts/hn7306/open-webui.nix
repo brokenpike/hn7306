@@ -2,13 +2,26 @@
 # and the guests in the tailnet policy (group:guests may reach port 8443 on
 # this machine and nothing else). Listens on localhost only; tailscale serve
 # publishes it as https://hn7306.heron-pickerel.ts.net:8443.
-{ config, ... }:
+{
+  config,
+  inputs,
+  pkgs,
+  ...
+}:
 
 let
   llm = config.local.llm;
 in
 {
   services.open-webui = {
+    # TEMPORARY, see the nixpkgs-openwebui input in flake.nix. Imported with
+    # this system's nixpkgs settings (unfree, ROCm), so the package is the
+    # same one the main nixpkgs built before posthog broke.
+    package =
+      (import inputs.nixpkgs-openwebui {
+        inherit (pkgs.stdenv.hostPlatform) system;
+        config = config.nixpkgs.config;
+      }).open-webui;
     enable = true;
     host = "127.0.0.1";
     # 8080 is llama-swap.

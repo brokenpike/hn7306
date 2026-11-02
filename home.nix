@@ -192,10 +192,6 @@ in
   # host without a local model gets no OpenCode.
   programs.opencode = lib.mkIf (llm.model != null) {
     enable = true;
-    # TEMPORARY, see the nixpkgs-tailscale input in flake.nix: OpenCode 2 is
-    # not in the main nixpkgs yet. It reads the V1 settings below and converts
-    # them itself.
-    package = inputs.nixpkgs-tailscale.legacyPackages.${pkgs.stdenv.hostPlatform.system}.opencode;
     settings = {
       "$schema" = "https://opencode.ai/config.json";
 
