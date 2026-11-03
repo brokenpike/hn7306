@@ -1614,6 +1614,21 @@ etc.) is still applied to latitude5400 unmodified; trimming it for a
 low-storage host was explicitly deferred. An RDP/VNC *server* for hn7306/gz302
 also still needs setting up for remmina to have something to connect to.
 
+**Kernel.** It runs the NixOS default (LTS) kernel, 6.18, while the other
+three hosts set `linuxPackages_latest` (7.3). On purpose: the i5-8350U and
+its graphics have been well supported for years, so a thin client gains
+little from the newest kernel and gets more churn. Switch only if a new
+peripheral or a bug needs it.
+
+**Power supply stops the boot (2026-11-03).** After the reboot into the
+2026-11-02 update it stayed offline: Dell's firmware stopped before the boot
+loader with an adapter warning ("press F1 to continue") because it was on a
+30 W USB-C charger, and the 5400 wants 65 W or more. Nothing to do with
+NixOS. Use a 65 W or larger charger, and in the BIOS setup (F2) set POST
+Behavior → Warnings and Errors to "Continue on Warnings" (optionally Power
+Management → Adapter Warnings off), so a warning never leaves the machine
+waiting for a key press and off the tailnet.
+
 ## Full update with Open WebUI pinned (2026-11-02)
 
 posthog has been marked broken since 2026-10-19 (it does not support mcp 2;
