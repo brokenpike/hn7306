@@ -74,6 +74,7 @@ in
     hunspellDicts.nb-no
     languagetool
     lazygit
+    poppler-utils # PDF to text conversion
     rnote
     tesseract
 
