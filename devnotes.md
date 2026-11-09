@@ -1671,3 +1671,35 @@ specified"). Removed the override, leaving `services.desktopManager.gnome.enable
 After the switch, check Settings → Displays still offers fractional scale
 values; if not, look for the GNOME 51 replacement setting rather than
 re-adding the old key.
+
+## Hex voice dictation (2026-11-09)
+
+Hex (github:anomalyco/hex) is local voice dictation from Anomaly, the
+OpenCode team: hold a shortcut, speak, it pastes. Not in nixpkgs; it comes in
+as flake input `hex` and its Home Manager module (`programs.hex` in home.nix,
+with `autostart`, so a user service starts it with the GNOME session).
+
+- The input follows our nixpkgs. Hex's docs warn that built from its own
+  pinned nixpkgs it can use an older glibc than the system's graphics
+  drivers, then finds no Vulkan adapter and its window does not open.
+- Transcription uses Vulkan (RADV on the Strix Halo iGPU, ANV on the
+  Latitude) with a CPU fallback; Hex times a slow iGPU against the CPU once
+  and keeps the faster. It needs AVX2, which all four hosts have.
+- GNOME is outside Hex's stated Linux support (X11 and wlroots compositors).
+  On GNOME it pastes through the RemoteDesktop portal and registers its
+  shortcut through the GlobalShortcuts portal; xdg-desktop-portal-gnome
+  offers both, and GNOME asks once for each. The recording overlay needs
+  layer-shell, which Mutter lacks, so it may not show.
+- No binary cache: about 300 Rust derivations build from source on the
+  first rebuild after Hex or nixpkgs changes.
+- As with the GGUFs, nothing downloads by itself: `programs.hex.installModel`
+  stays off; run `hex model install` once per machine.
+- Tested on hn7306: NB-Whisper Medium (`nb_whisper_medium`, Bokmål) runs on
+  the 8060S, 0.6 s on the GPU against 44 s on the CPU for a 1.5 s clip;
+  English is `parakeet_unified_en`, Hex's default. On Wayland Hex can't follow
+  the keyboard layout, so home.nix binds Super+Alt+E / Super+Alt+N to
+  `hex model use … --language en|no`. That dconf list owns all GNOME custom
+  shortcuts: ones made in Settings vanish at the next switch.
+- GNOME asked once for the GlobalShortcuts binding (Ctrl+Alt+Space, held)
+  and once for RemoteDesktop to paste. GNOME has no data-control protocol, so
+  the clipboard keeps the dictated text instead of being restored.

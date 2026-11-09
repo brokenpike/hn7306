@@ -50,6 +50,8 @@ let
   );
 in
 {
+  imports = [ inputs.hex.homeManagerModules.hex ];
+
   home.username = "scott";
   home.homeDirectory = "/home/scott";
 
@@ -186,6 +188,17 @@ in
     };
   };
 
+  # Hex voice dictation: hold the shortcut, speak, it pastes. Transcribes on
+  # this machine (Vulkan, CPU fallback). Its Linux beta targets wlroots
+  # compositors; on GNOME it pastes through the RemoteDesktop portal and takes
+  # its shortcut from the GlobalShortcuts portal, so GNOME asks once for each.
+  # Like the GGUFs, the speech model is not downloaded automatically: run
+  # `hex model install` once.
+  programs.hex = {
+    enable = true;
+    autostart = true;
+  };
+
   # OpenCode coding agent, using the local LLM server set in llm.nix. It runs
   # as scott with scott's permissions, unlike Hermes, so it asks before editing
   # files or running commands. Server, model and context come from llm.nix; a
@@ -265,6 +278,24 @@ in
       sleep-inactive-battery-timeout = 900;
     };
     "org/gnome/desktop/session".idle-delay = lib.hm.gvariant.mkUint32 600;
+
+    # Switch Hex's speech model between English and Norwegian. On Wayland Hex
+    # can't follow the keyboard layout, so the switch is a shortcut. This list
+    # replaces any custom shortcuts made in GNOME Settings; add new ones here.
+    "org/gnome/settings-daemon/plugins/media-keys".custom-keybindings = [
+      "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/hex-english/"
+      "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/hex-norwegian/"
+    ];
+    "org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/hex-english" = {
+      name = "Hex: English";
+      command = "hex model use parakeet_unified_en --language en";
+      binding = "<Super><Alt>e";
+    };
+    "org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/hex-norwegian" = {
+      name = "Hex: Norwegian";
+      command = "hex model use nb_whisper_medium --language no";
+      binding = "<Super><Alt>n";
+    };
   };
 
   # Home Manager release this config was first written for. Do not bump this

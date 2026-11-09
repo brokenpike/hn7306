@@ -26,6 +26,14 @@
     # so nix flake update leaves it alone. Remove it and its use in both
     # hosts' open-webui.nix once posthog is fixed (NixOS/nixpkgs#578265).
     nixpkgs-openwebui.url = "github:NixOS/nixpkgs/fe13242281a67641c0102cdb1087f0ebe586c7df";
+    # Hex voice dictation (Anomaly, the OpenCode team), not in nixpkgs. It must
+    # follow our nixpkgs: built against an older glibc than the system's
+    # graphics drivers, it finds no Vulkan adapter and its window won't open.
+    hex = {
+      url = "github:anomalyco/hex";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.home-manager.follows = "home-manager";
+    };
   };
 
   outputs =
