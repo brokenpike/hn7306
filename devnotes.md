@@ -1649,3 +1649,25 @@ environment is many small wheel builds). The nixpkgs-tailscale input and its
 two `package =` lines are gone. Remove nixpkgs-openwebui once posthog is
 fixed; check with
 `nix eval --json github:NixOS/nixpkgs/nixos-unstable#legacyPackages.x86_64-linux.python3Packages.posthog.meta.broken`.
+
+## Brave removed from home.nix (2026-11-09)
+
+nixpkgs dropped `brave` on 2026-11-03 (#582838: none of its maintainers had
+commit access to merge security updates), and nixos-unstable `f4a03c0`
+(2026-11-07) carries the removal, so evaluation failed with "brave has been
+removed from nixpkgs". It was re-added on master hours later (#584534), but
+the user chose to drop it from `home.packages` rather than wait. If wanted
+again: put `brave` back once the channel has it, or use the Flatpak
+`com.brave.Browser` (`services.flatpak` is enabled).
+
+## GNOME 51 drops mutter experimental-features (2026-11-09)
+
+The nixpkgs update to f4a03c0 brought GNOME 51, whose `org.gnome.mutter`
+schema no longer has an `experimental-features` key. gnome.nix overrode it
+with `['scale-monitor-framebuffer', 'xwayland-native-scaling']` for fractional
+scaling, and the strict schema compile in `gnome-gsettings-overrides` failed
+the whole rebuild ("No such key experimental-features ... --strict was
+specified"). Removed the override, leaving `services.desktopManager.gnome.enable`.
+After the switch, check Settings → Displays still offers fractional scale
+values; if not, look for the GNOME 51 replacement setting rather than
+re-adding the old key.

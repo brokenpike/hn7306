@@ -56,7 +56,6 @@ in
   # Tip: in helix, select the list and pipe it through `sort` to alphabetize
   home.packages = with pkgs; [
     alacritty
-    brave
     btop
     claude-code
     cowsay
