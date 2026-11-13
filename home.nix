@@ -95,7 +95,6 @@ in
     vscode
     whisperVulkan # let binding above; whisper-cli
     wl-clipboard # helix system clipboard (space + y yanks to it)
-    zeroad
   ];
 
   programs.obs-studio = {
