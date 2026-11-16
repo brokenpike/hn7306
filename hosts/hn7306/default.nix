@@ -15,6 +15,7 @@
     ./open-webui.nix
     ../../hermes.nix
     ../../vm.nix
+    ./visure.nix
   ];
 
   # Must match the nixosConfigurations attribute name in flake.nix.

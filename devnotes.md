@@ -1704,6 +1704,95 @@ with `autostart`, so a user service starts it with the GNOME session).
   and once for RemoteDesktop to paste. GNOME has no data-control protocol, so
   the clipboard keeps the dictated text instead of being restored.
 
+## Visure X on Docker Compose (2026-11-13)
+
+Visure X ships as an air-gapped bundle (`visure-x-airgap-<version>.tar`:
+images, `infra/` with the compose file, and the vendor's install and upgrade
+scripts). hosts/hn7306/visure.nix runs it as the vendor intends, with Nix
+pinning everything around it.
+
+- **Not translated to Nix** (compose2nix / `virtualisation.oci-containers`):
+  the vendor's `load-images.sh` and `upgrade.sh` do the secrets, the image ID
+  checks against `VERSION`, the cold backup, the MongoDB auth migration and
+  the rollback. A translation would be redone every release and lose those.
+- **What is pinned:** the bundle (version + sha256 of the tar, checked before
+  unpacking), Docker (from flake.lock), the domain, the ports, `/etc/hosts`,
+  and the tools the vendor scripts run with (the `visure` wrapper's PATH).
+  `visure.service` refuses to start a version other than the pinned one.
+- **Upgrade:** tar into /scratch/iso, change version + hash in visure.nix,
+  rebuild, `sudo visure upgrade` (runs the vendor's `upgrade.sh --from`,
+  backups in /scratch/visure/backups). Rollback: `sudo visure rollback
+  <backup dir>`, then revert visure.nix.
+- **Not in Nix:** `infra/.env` and the certificate, written by the vendor
+  scripts into /scratch/visure/<bundle>/infra (secrets stay out of the store),
+  the license (bound to the server UUID in the Mongo volume), and the data
+  volumes under /scratch/docker.
+- **Ports:** HTTPS on 9443, because 8443 is `tailscale serve` on tailscale0.
+  Docker's published ports bypass the NixOS firewall, so the daemon's `ip`
+  is 127.0.0.1: only this machine (and quickemu VMs, at 10.0.2.2) reaches it.
+- **Docker is socket-activated, Visure started by hand:** it needs 16 GB next
+  to the Qwen pair and a VM. Containers are `restart: unless-stopped`, so a
+  stack not stopped before shutdown comes back the next time Docker starts.
+- `scott` is not in the `docker` group (root-equivalent); use `sudo visure`.
+
+## Visure X on Podman (2026-11-13)
+
+visure.nix now runs the same bundle on rootful Podman 6.1.4 (`engine =
+"podman"`; `"docker"` switches back to the setup above, which keeps nothing:
+each engine has its own images and volumes). The vendor scripts keep calling
+`docker` and `docker compose`: the `visure` wrapper's PATH has the real Docker
+CLI (`docker-client`, Compose 5.7.0) talking to Podman's socket
+(`virtualisation.podman.dockerSocket`, /run/docker.sock). Images and volumes
+are in /scratch/containers/storage.
+
+Tested against a throwaway rootless Podman API with two dockerTools images
+named like the bundle's (`infra-test:latest`, `mongo:7.0`):
+
+- **Works unchanged:** `docker image inspect -f '{{.Id}}'` gives the
+  `sha256:` config digest, the same as Docker, so load-images.sh's check of
+  every image against VERSION holds; `docker tag`, `docker image ls`,
+  `docker info -f '{{.DockerRootDir}}'` (the graphroot, for the space check).
+  The `reference=infra-*:latest` filter of upgrade.sh is ignored (it lists
+  every image); that only re-tags a few more images under the old version.
+- **Two answers the vendor scripts reject, shimmed** (a `docker` wrapper in
+  visure.nix, nothing in the bundle patched):
+  - `docker version` says 6.1.4, and prerequisites.sh wants Docker >= 24. The
+    shim reports `25.0.0+podman.<version>`: Podman's API level is 1.44,
+    Docker Engine 25's.
+  - `docker load` prints `Loaded image: localhost/mongo:7.0`, every image on
+    one line with no newline (a multi-image archive: one line, the names
+    separated by commas), and load-images.sh looks for one exact line
+    `Loaded image: mongo:7.0` per image. The shim splits the lines and drops
+    the `localhost/` / `docker.io/` prefixes. Checked with a replay of that
+    output: the expected lines match.
+- **Not tested:** `docker compose up` on rootful Podman. The rootless test
+  hung creating the containers (pasta and aardvark-dns started, nothing
+  more), which says little about rootful, where netavark sets up the bridge
+  directly. The first `sudo visure install` is the real test; if Compose
+  fails there, `engine = "docker"` is the fallback.
+- **Ports:** Podman has no default publish address (Docker's `ip`), and
+  forwarded ports skip the NixOS INPUT rules. A mangle PREROUTING chain
+  (`visure-local`) drops 8082, 9443, 9010 and 3100 unless they come in on
+  `lo` or a `podman*` bridge.
+- `restart: unless-stopped` does not bring containers back after a reboot
+  under Podman (no daemon); `sudo systemctl start visure` does. `visure up`
+  passes `--pull never`, so a missing image fails instead of being pulled.
+- **First start on rootful Podman (same day):** every container started, but
+  HTTPS hung after the TLS handshake. nginx.compose.conf resolves each
+  upstream (`set $x frontend:5173; proxy_pass http://$x`) at request time
+  through `resolver 127.0.0.11`, Docker's embedded DNS; Podman's
+  aardvark-dns listens on the network gateway instead. The shim adds a
+  Compose override (`nginxOverride` in visure.nix) to every `compose` call
+  naming infra/docker-compose.yml: nginx mounts a copy of the config with
+  `resolver ${NGINX_LOCAL_RESOLVERS}`, which the nginx image fills from
+  /etc/resolv.conf (`NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1`). The bundle stays
+  as shipped (SHA256SUMS covers nginx.compose.conf). If a bundle drops that
+  resolver line, the shim stops with a message instead of guessing.
+  Also learned on the way: a multi-image `podman load` prints all names on
+  one comma-separated line; a socket Docker left at /run/docker.sock kept
+  Podman's symlink from being made (visure sets DOCKER_HOST to
+  /run/podman/podman.sock); systemd gives the service no bash on PATH.
+
 ## Open WebUI pin removed, built without ROCm (2026-11-16)
 
 - python posthog evaluates again on nixos-unstable, so the
