@@ -73,6 +73,7 @@ in
     htop
     hunspell
     hunspellDicts.nb-no
+    jq
     languagetool
     lazygit
     poppler-utils # PDF to text conversion
