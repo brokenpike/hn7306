@@ -20,12 +20,6 @@
     # Tier 2 upstream: commits to main can break it, so update it on purpose
     # (nix flake update hermes-agent). Deliberately does not follow our nixpkgs.
     hermes-agent.url = "github:NousResearch/hermes-agent";
-    # TEMPORARY: Open WebUI from the last nixpkgs where it evaluates. Since
-    # 2026-10-19 python posthog is marked broken (it does not support mcp 2),
-    # and chromadb, which Open WebUI needs, depends on it. Pinned to a commit,
-    # so nix flake update leaves it alone. Remove it and its use in both
-    # hosts' open-webui.nix once posthog is fixed (NixOS/nixpkgs#578265).
-    nixpkgs-openwebui.url = "github:NixOS/nixpkgs/fe13242281a67641c0102cdb1087f0ebe586c7df";
     # Hex voice dictation (Anomaly, the OpenCode team), not in nixpkgs. It must
     # follow our nixpkgs: built against an older glibc than the system's
     # graphics drivers, it finds no Vulkan adapter and its window won't open.

@@ -14,13 +14,16 @@ let
 in
 {
   services.open-webui = {
-    # TEMPORARY, see the nixpkgs-openwebui input in flake.nix. Imported with
-    # this system's nixpkgs settings (unfree, ROCm), so the package is the
-    # same one the main nixpkgs built before posthog broke.
+    # Without ROCm: its torch (local embeddings only, the chat runs on
+    # llama-swap) is then the CPU build from the binary cache. With the global
+    # rocmSupport (strix-halo.nix) it builds torch and aotriton locally, and
+    # aotriton 0.12b failed to compile against triton 3.9 (2026-11-16).
     package =
-      (import inputs.nixpkgs-openwebui {
+      (import inputs.nixpkgs {
         inherit (pkgs.stdenv.hostPlatform) system;
-        config = config.nixpkgs.config;
+        config = config.nixpkgs.config // {
+          rocmSupport = false;
+        };
       }).open-webui;
     enable = true;
     host = "127.0.0.1";

@@ -1703,3 +1703,15 @@ with `autostart`, so a user service starts it with the GNOME session).
 - GNOME asked once for the GlobalShortcuts binding (Ctrl+Alt+Space, held)
   and once for RemoteDesktop to paste. GNOME has no data-control protocol, so
   the clipboard keeps the dictated text instead of being restored.
+
+## Open WebUI pin removed, built without ROCm (2026-11-16)
+
+- python posthog evaluates again on nixos-unstable, so the
+  `nixpkgs-openwebui` input (pinned since 2026-10-19) is gone and Open WebUI
+  comes from the main nixpkgs.
+- The first build then failed in aotriton 0.12b (a triton 3.9 compile
+  error). The global `rocmSupport` on hn7306 and gz302 makes Open WebUI's
+  torch (via sentence-transformers) a ROCm build, which cache.nixos.org does
+  not carry, so it was compiled locally. Both hosts' open-webui.nix now import
+  nixpkgs with `rocmSupport = false`: torch is the cached CPU build, and Open
+  WebUI only uses it for local embeddings; chat runs on llama-swap.
