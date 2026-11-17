@@ -47,6 +47,9 @@ let
     "t1"
     "t2"
     "t3"
+    "t4"
+    "t5"
+    "t6"
   ];
 
   # The vendor scripts call `docker` and `docker compose`. With Podman they

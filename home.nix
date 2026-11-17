@@ -59,6 +59,7 @@ in
   home.packages = with pkgs; [
     alacritty
     btop
+    brave
     claude-code
     cowsay
     deadnix
